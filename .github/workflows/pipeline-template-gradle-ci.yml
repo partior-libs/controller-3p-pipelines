@@ -209,6 +209,7 @@ jobs:
           java-version: ${{ steps.pipeline-branch-config.outputs.java-version }}
           
       - name: Setup Jfrog Gradle Config
+        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
         run: |
           ## Execute gradle with jfrog cli
           jfrogServerID="${{ steps.pipeline-branch-config.outputs.artifact_packager_jfrog-config-id }}"
@@ -219,17 +220,8 @@ jobs:
           echo "[DEBUG] Gradle Deploy Repo: $gradleRepoDeploy"
           jf gradlec --server-id-resolve="$jfrogServerID" --server-id-deploy="$jfrogServerID" --repo-resolve="$gradleRepoResolve" --repo-deploy="$gradleRepoDeploy" --deploy-maven-desc=true --deploy-ivy-desc=true --use-wrapper=true
 
-      - name: Build
-        id: packaging
-        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
-        uses: partior-libs/gcs-generic-packager@partior-stable
-        with:
-          artifactory-target-artifact-name: ${{ env.ARTIFACT_BASE_NAME }}
-          target-version: ${{ steps.version-bot.outputs.artifact-version-name }}
-          folder-list: ${{ steps.pipeline-branch-config.outputs.artifact_packager_folder-list }}
-          file-list: ${{ env.MIGRATION_TOOL_FILE }},${{ steps.pipeline-branch-config.outputs.artifact_packager_file-list }}
-
       - name: Cache Gradle packages
+        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
         uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
@@ -237,13 +229,15 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
 
       - name: Grant execute permission for gradlew
+        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
         run: chmod +x gradlew
 
       - name: Build
+        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
         run: jf gradle check jacocoTestReport
 
       - name: Run Codacy Analysis CLI
-        if: steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
+        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true' && steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
         uses: codacy/codacy-analysis-cli-action@master
         with:
           # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
