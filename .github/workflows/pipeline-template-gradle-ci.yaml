@@ -217,7 +217,7 @@ jobs:
           gradleRepoResolve="${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}"
           gradleRepoDeploy="${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}"
           echo "[DEBUG] Jfrog Server ID: $jfrogServerID"
-          echo "[DEBUG] Gradle Resolve Repo: $gradleRepoResolveRelease"
+          echo "[DEBUG] Gradle Resolve Repo: $gradleRepoResolve"
           echo "[DEBUG] Gradle Deploy Repo: $gradleRepoDeploy"
           jf gradlec --server-id-resolve="$jfrogServerID" --server-id-deploy="$jfrogServerID" --repo-resolve="$gradleRepoResolve" --repo-deploy="$gradleRepoDeploy" --deploy-maven-desc=true --deploy-ivy-desc=true --use-wrapper=true
 
