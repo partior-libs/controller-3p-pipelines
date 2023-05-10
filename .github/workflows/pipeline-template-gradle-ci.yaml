@@ -206,6 +206,7 @@ jobs:
       - name: Setup Java ${{ steps.pipeline-branch-config.outputs.java-version }}
         uses: actions/setup-java@v3
         with:
+          distribution: temurin
           java-version: ${{ steps.pipeline-branch-config.outputs.java-version }}
           
       - name: Setup Jfrog Gradle Config
