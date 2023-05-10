@@ -271,8 +271,8 @@ jobs:
         run: |
           ## Upload to artifactory
           echo "[INFO] Upload to Artifactory"
-          jf gradle clean artifactoryPublish -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "SMC CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
-          jf rt bp "SMC CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          jf gradle clean artifactoryPublish -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
+          jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
 
 
       - name: Git config
