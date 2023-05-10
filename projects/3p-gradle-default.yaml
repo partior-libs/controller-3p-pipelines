@@ -103,7 +103,7 @@
         codacy:
           upload-coverage:
             enabled: false
-            coverage-file: ./lcov_filtered.info	
+            coverage-file: ./lcov_filtered.info
           spotbugs:
             enabled: true
         unit-test:

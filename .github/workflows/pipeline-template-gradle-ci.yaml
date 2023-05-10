@@ -19,7 +19,7 @@ env:
 
 jobs:
   read-repo:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       BRANCH-NAME: ${{ steps.get-repo.outputs.branch-name }}
       REPO-NAME: ${{ steps.get-repo.outputs.name }}
