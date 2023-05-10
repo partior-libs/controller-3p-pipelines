@@ -1,0 +1,126 @@
+---
+3p-gradle:
+  ci:
+    artifact-base-name: default-artifact-name
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 0.0.1
+      version-sources:
+          jira:
+            enabled: false
+            ## Comma delimited, example: DEVPILOT,DSO
+            project-keys: DEVPILOT
+            version-identifier: "DUMMY"
+      major-version:
+        enabled: true
+        rules:
+          branches: 
+            target: release,develop,hotfix
+            enabled: true
+          message-tag: 
+            target: MAJOR-VERSION 
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: MAJOR-VERSION
+      minor-version:
+        enabled: true
+        rules:
+          branches: 
+            target: release,develop,hotfix
+            enabled: true
+          message-tag: 
+            target: MINOR-VERSION 
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: MINOR-VERSION
+      patch-version:
+        enabled: false
+        rules:
+          branches: 
+            target: main
+            enabled: true
+          message-tag: 
+            target: PATCH-VERSION 
+            enabled: false
+          file:   
+            enabled: false
+            target: ./app-version.cfg
+            key: PATCH-VERSION
+      release-candidate-version:
+        enabled: true
+        identifier: rc
+        rules:
+          branches: 
+            target: release,hotfix,
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: RC-VERSION
+      development-version:
+        enabled: true
+        identifier: dev
+        rules:
+          branches: 
+            target: develop,feature,bugfix,ci
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: DEV-VERSION
+      build-version:
+        enabled: true
+        identifier: bld
+        rules:
+          branches: 
+            target: feature
+            enabled: true
+      replacement:
+        enabled: false
+        file-token: 
+          enabled: false
+          target: pom.xml
+          token: '@@VERSION_BOT_TOKEN@@'
+        maven-pom: 
+          enabled: false
+          target: pom.xml
+
+    branches:
+      default:
+        java-version: 11
+        prepare-release:
+          enabled: false
+        compile:
+          gradle:
+            enabled: true
+        gitleaks:
+          enabled: false
+          scan-depth: 2
+        codacy:
+          upload-coverage:
+            enabled: false
+            coverage-file: ./lcov_filtered.info	
+          spotbugs:
+            enabled: true
+        unit-test:
+          enabled: false
+          coverage:
+            enabled: false
+        artifact:
+          packager:
+            enabled: false
+            jfrog-config-id: artifactoryPartior
+            group: partior
+            artifactory-username: NA
+            artifactory-repo: 3p-gradle-dev
+            artifactory-dev-repo: 3p-gradle-dev
+            artifactory-release-repo: 3p-gradle-release
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
