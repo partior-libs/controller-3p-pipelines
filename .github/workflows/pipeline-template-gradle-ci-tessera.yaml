@@ -165,7 +165,7 @@ jobs:
       - run: ./gradlew dependencyCheckAnalyze -x test
 
   ci-build:
-    needs: [ read-repo, read-config, check-dependencies, check-version ]
+    needs: [ read-repo, read-config ]
     runs-on: ubuntu-latest
     env:
       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
