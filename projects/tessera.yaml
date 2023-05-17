@@ -1,0 +1,52 @@
+---
+3p-gradle:
+  ci:
+    artifact-base-name: partior-tessera
+    branches:
+      default:
+        java-version: 17
+        prepare-release:
+          enabled: false
+        compile:
+          gradle:
+            enabled: true
+        gitleaks:
+          enabled: false
+          scan-depth: 2
+        codacy:
+          upload-coverage:
+            enabled: false
+            coverage-file: ./lcov_filtered.info
+          spotbugs:
+            enabled: true
+        unit-test:
+          enabled: false
+          coverage:
+            enabled: false
+        artifact:
+          packager:
+            enabled: true
+            jfrog-config-id: artifactoryPartior
+            group: com.partior
+            artifactory-username: NA
+            artifactory-repo: 3p-gradle-dev
+            artifactory-dev-repo: 3p-gradle-dev
+            artifactory-release-repo: 3p-gradle-release
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
+      main:
+        java-version: 11
+        prepare-release:
+          enabled: true
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-gradle-release
+        tag-version:
+          git:
+            enabled: true
+          jira-issue:
+            enabled: true
