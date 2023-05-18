@@ -16,6 +16,8 @@ env:
   YAML_CONFIG_IMPORTER: yaml_importer_${{ github.run_id }}_${{ github.run_number }}
   YAML_BRANCH_CONFIG_IMPORTER: yaml_branch_importer_${{ github.run_id }}_${{ github.run_number }}
   ARTIFACT_VERSION_FILE: version_file_${{ github.run_id }}_${{ github.run_number }}
+  GPG_SECRET_KEYS: ${{ secrets.GPG_SECRET_KEYS }}
+  GPG_OWNERTRUST: ${{ secrets.GPG_OWNERTRUST }}
 
 jobs:
   read-repo:
@@ -264,7 +266,7 @@ jobs:
       - name: Build
         run: |
           echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-          ./gradlew build -x dependencyCheckAnalyze -x javadoc -x test --info
+          jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
 
       # - name: Run Codacy Analysis CLI
       #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true' && steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
@@ -281,14 +283,20 @@ jobs:
 
 
 
-      # - name: Publish to artifactory
-      #   if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
-      #   run: |
-      #     ## Upload to artifactory
-      #     echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-      #     echo "[INFO] Upload to Artifactory"
-      #     jf gradle clean artifactoryPublish -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
-      #     jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+      - name: Publish to artifactory
+        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
+        run: |
+          ## Upload to artifactory
+          echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
+
+          ## Setting up GPG keys
+          echo "${GPG_SECRET_KEYS}" | base64 --decode | gpg --import --no-tty --batch --yes
+          echo $GPG_OWNERTRUST | base64 --decode | gpg --import-ownertrust
+          pubkey=`gpg --list-keys -a techservices-devsecops@partior.com|head -2|tail -1|xargs`
+
+          echo "[INFO] Upload to Artifactory"
+          jf gradle clean artifactoryPublish -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
+          jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
 
       # - name: Git config
       #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
