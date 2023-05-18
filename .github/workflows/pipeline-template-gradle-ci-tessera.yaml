@@ -259,6 +259,14 @@ jobs:
         if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
         run: chmod +x gradlew
 
+      - name: Tweak build config for Partior pipeline
+        run: |
+          ## Changes needed for Partior build
+          echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
+          find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
+          sed -i "s/net.consensys.quorum.tessera/com.partior.partior-tessera/g" build.gradle
+
+
       # - name: Build
       #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
       #   run: jf gradle check jacocoTestReport
@@ -289,12 +297,6 @@ jobs:
       - name: Publish to artifactory
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
-          ## Upload to artifactory
-          echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-
-          ## Fix build issue with jfrog apiVersion: v1
-          find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
-
           ## Setting up GPG keys
           echo "${GPG_SECRET_KEYS}" | base64 --decode | gpg --import --no-tty --batch --yes
           echo ${GPG_OWNERTRUST} | base64 --decode | gpg --import-ownertrust
