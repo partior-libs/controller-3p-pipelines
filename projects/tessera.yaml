@@ -1,7 +1,17 @@
 ---
 3p-gradle:
   ci:
-    artifact-base-name: partior-tessera
+    artifact-base-name: tessera
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 0.0.1
+      prepend-version:
+        enabled: true
+        rules:
+          file:
+            enabled: true
+            target: ./app-version.cfg
+            key: TESSERA-VERSION
     branches:
       default:
         java-version: 17
@@ -27,7 +37,7 @@
           packager:
             enabled: true
             jfrog-config-id: artifactoryPartior
-            group: com.partior
+            group: com.partior.partior-tessera
             artifactory-username: NA
             artifactory-repo: 3p-gradle-dev
             artifactory-dev-repo: 3p-gradle-dev

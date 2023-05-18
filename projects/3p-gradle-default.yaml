@@ -11,6 +11,13 @@
             ## Comma delimited, example: DEVPILOT,DSO
             project-keys: DEVPILOT
             version-identifier: "DUMMY"
+      prepend-version:
+        enabled: false
+        rules:
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: PREPEND-LABEL
       major-version:
         enabled: true
         rules:
