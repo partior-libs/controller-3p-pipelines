@@ -264,20 +264,20 @@ jobs:
       - name: Build
         run: |
           echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-          jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
+          ./gradlew build -x dependencyCheckAnalyze -x javadoc -x test --info
 
-      - name: Run Codacy Analysis CLI
-        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true' && steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
-        uses: codacy/codacy-analysis-cli-action@master
-        with:
-          # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
-          # You can also omit the token and run the tools that support default configurations
-          api-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          verbose: true
-          tool: spotbugs
-          skip-uncommitted-files-check: true
-          upload: true
-          skip-container-engine-check: true
+      # - name: Run Codacy Analysis CLI
+      #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true' && steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
+      #   uses: codacy/codacy-analysis-cli-action@master
+      #   with:
+      #     # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
+      #     # You can also omit the token and run the tools that support default configurations
+      #     api-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+      #     verbose: true
+      #     tool: spotbugs
+      #     skip-uncommitted-files-check: true
+      #     upload: true
+      #     skip-container-engine-check: true
 
 
 
@@ -290,19 +290,19 @@ jobs:
       #     jf gradle clean artifactoryPublish -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
       #     jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
 
-      - name: Git config
-        if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-        run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+      # - name: Git config
+      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+      #   run: |
+      #     git config user.name github-actions
+      #     git config user.email github-actions@github.com
 
-      - name: Create new tag
-        if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-        run: git tag -f v${{ steps.version-bot.outputs.artifact-version-name }}
+      # - name: Create new tag
+      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+      #   run: git tag -f v${{ steps.version-bot.outputs.artifact-version-name }}
 
-      - name: Push new tag
-        if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-        run: git push origin v${{ steps.version-bot.outputs.artifact-version-name }} --force
+      # - name: Push new tag
+      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+      #   run: git push origin v${{ steps.version-bot.outputs.artifact-version-name }} --force
 
       - name: Upload tessera dists
         uses: actions/upload-artifact@v2
