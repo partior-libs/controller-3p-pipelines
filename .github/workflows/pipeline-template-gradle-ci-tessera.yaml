@@ -760,7 +760,7 @@ jobs:
 
   atest:
     name: Quorum acceptance tests
-    needs: [build, build_image]
+    needs: [ci-build, build_image]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code from SCM
