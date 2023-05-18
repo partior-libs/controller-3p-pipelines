@@ -285,28 +285,18 @@ jobs:
       #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
       #   run: jf gradle check jacocoTestReport
 
-      # - name: Build
-      #   run: |
-      #     echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-      #     ## Fix build issue with jfrog apiVersion: v1
-      #     find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
+      - name: Build
+        run: |
+          ## Fix build issue with jfrog apiVersion: v1
+          find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
           
-      #     jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
+          jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
 
-      # - name: Run Codacy Analysis CLI
-      #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true' && steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
-      #   uses: codacy/codacy-analysis-cli-action@master
-      #   with:
-      #     # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
-      #     # You can also omit the token and run the tools that support default configurations
-      #     api-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-      #     verbose: true
-      #     tool: spotbugs
-      #     skip-uncommitted-files-check: true
-      #     upload: true
-      #     skip-container-engine-check: true
-
-
+      - name: Upload kalium encryptor dist
+        uses: actions/upload-artifact@v3
+        with:
+          name: kalium-dist
+          path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
 
       - name: Publish to artifactory
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
@@ -322,20 +312,6 @@ jobs:
           jf gradle clean artifactoryPublish -Psigning.gnupg.keyName=$pubkey -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
                     
           jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
-
-      # - name: Git config
-      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-      #   run: |
-      #     git config user.name github-actions
-      #     git config user.email github-actions@github.com
-
-      # - name: Create new tag
-      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-      #   run: git tag -f v${{ steps.version-bot.outputs.artifact-version-name }}
-
-      # - name: Push new tag
-      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-      #   run: git push origin v${{ steps.version-bot.outputs.artifact-version-name }} --force
 
       - name: Upload tessera dist
         uses: actions/upload-artifact@v3
@@ -363,11 +339,20 @@ jobs:
         with:
           name: hashicorp-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
-      - name: Upload kalium encryptor dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: kalium-dist
-          path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
+
+      # - name: Git config
+      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+      #   run: |
+      #     git config user.name github-actions
+      #     git config user.email github-actions@github.com
+
+      # - name: Create new tag
+      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+      #   run: git tag -f v${{ steps.version-bot.outputs.artifact-version-name }}
+
+      # - name: Push new tag
+      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+      #   run: git push origin v${{ steps.version-bot.outputs.artifact-version-name }} --force
 
   spotbugs:
     name: Spotbugs
