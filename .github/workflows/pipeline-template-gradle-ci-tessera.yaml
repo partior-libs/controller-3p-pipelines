@@ -193,6 +193,7 @@ jobs:
       - uses: actions/checkout@v3
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
         with:
+          token: ${{ secrets.GH_REPO_READER_TOKEN }}
           fetch-depth: 0
 
       - uses: actions/checkout@v3
