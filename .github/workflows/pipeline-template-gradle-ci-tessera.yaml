@@ -230,6 +230,8 @@ jobs:
 
       - name: Get last tag from original source
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
         run: |
           lastTag=$(gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
           if [[ -z "$lastTag" ]]; then
