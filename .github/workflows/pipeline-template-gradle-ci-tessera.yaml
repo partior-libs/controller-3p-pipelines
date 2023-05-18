@@ -247,6 +247,8 @@ jobs:
       - name: Get last tag from original source
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
         run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git remote add upstream git@github.com:ConsenSys/tessera.git
           git fetch upstream --tags
           lastTag=$(git describe --abbrev=0 --tags $(git rev-list --tags --max-count=1) | xargs)
