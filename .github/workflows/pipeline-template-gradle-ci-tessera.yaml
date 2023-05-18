@@ -262,7 +262,8 @@ jobs:
       - name: Tweak build config for Partior pipeline
         run: |
           ## Changes needed for Partior build
-          echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
+          # echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
+          echo "23.04.01_partior0.0.1-dev.1" > version.txt
           find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
           sed -i "s/net.consensys.quorum.tessera/com.partior.partior-tessera/g" build.gradle
 
@@ -305,7 +306,9 @@ jobs:
           echo "[DEBUG] Pubkey: $pubkey"
 
           echo "[INFO] Upload to Artifactory"
-          jf gradle clean artifactoryPublish -Psigning.gnupg.keyName=$pubkey -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
+          #jf gradle clean artifactoryPublish -Psigning.gnupg.keyName=$pubkey -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
+          jf gradle clean artifactoryPublish -Psigning.gnupg.keyName=$pubkey -Pversion=23.04.01_partior0.0.1-dev.1  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
+          
           jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
 
       # - name: Git config
