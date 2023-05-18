@@ -297,8 +297,10 @@ jobs:
 
           ## Setting up GPG keys
           echo "${GPG_SECRET_KEYS}" | base64 --decode | gpg --import --no-tty --batch --yes
-          echo $GPG_OWNERTRUST | base64 --decode | gpg --import-ownertrust
+          echo ${GPG_OWNERTRUST} | base64 --decode | gpg --import-ownertrust
+          gpg -k
           pubkey=`gpg --list-keys -a techservices-devsecops@partior.com|head -2|tail -1|xargs`
+          echo "[DEBUG] Pubkey: $pubkey"
 
           echo "[INFO] Upload to Artifactory"
           jf gradle clean artifactoryPublish -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
