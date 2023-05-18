@@ -229,16 +229,20 @@ jobs:
           jf gradlec --server-id-resolve="$jfrogServerID" --server-id-deploy="$jfrogServerID" --repo-resolve="$gradleRepoResolve" --repo-deploy="$gradleRepoDeploy" --deploy-maven-desc=true --deploy-ivy-desc=true --use-wrapper=true
 
       - name: Get last tag from original source
+        id: get-tag
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
         run: |
           lastTag=$(gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
           if [[ -z "$lastTag" ]]; then
-            lastTag=partior
+            lastTag=partior-patch
+          else
+            lastTag=${lastTag}_patch
           fi
           echo "[INFO] Last tag found: $lastTag"
           echo "TESSERA-VERSION=$lastTag" > ./app-version.cfg
+          echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
 
       - name: Start versioning bot
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
@@ -266,10 +270,13 @@ jobs:
       - name: Tweak build config for Partior pipeline
         run: |
           ## Changes needed for Partior build
-          # echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-          echo "23.04.01_partior0.0.1-dev.1" > version.txt
+          groupName="${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}"
+          lastTag="${{ steps.get-tag.outputs.last-tag }}"
+          echo "[INFO] groupName=$groupName"
+          echo "[INFO] lastTag=$lastTag"
+          echo "$lastTag-${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
           find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
-          sed -i "s/net.consensys.quorum.tessera/com.partior.partior-tessera/g" build.gradle
+          sed -i "s/net.consensys.quorum.tessera/$groupName/g" build.gradle
 
 
       # - name: Build
