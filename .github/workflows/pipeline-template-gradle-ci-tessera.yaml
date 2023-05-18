@@ -263,13 +263,13 @@ jobs:
       #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
       #   run: jf gradle check jacocoTestReport
 
-      - name: Build
-        run: |
-          echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-          ## Fix build issue with jfrog apiVersion: v1
-          find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
+      # - name: Build
+      #   run: |
+      #     echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
+      #     ## Fix build issue with jfrog apiVersion: v1
+      #     find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
           
-          jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
+      #     jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
 
       # - name: Run Codacy Analysis CLI
       #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true' && steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
