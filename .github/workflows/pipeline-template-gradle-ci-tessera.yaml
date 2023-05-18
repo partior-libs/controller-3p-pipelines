@@ -238,6 +238,7 @@ jobs:
           if [[ -z "$lastTag" ]]; then
             lastTag=partior-patch
           else
+            lastTag=$(echo $lastTag | sed "s/tessera-//g")
             lastTag=${lastTag}_patch
           fi
           echo "[INFO] Last tag found: $lastTag"
