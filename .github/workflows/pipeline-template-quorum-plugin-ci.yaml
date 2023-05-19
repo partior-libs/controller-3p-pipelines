@@ -265,6 +265,7 @@ jobs:
 
   ci-build:
     name: Build on ${{ matrix.os }}
+    needs: [ pre-build ] 
     env:
       ARTIFACT_VERSION: ${{ needs.pre-build.outputs.ARTIFACT-VERSION }}
     strategy:
