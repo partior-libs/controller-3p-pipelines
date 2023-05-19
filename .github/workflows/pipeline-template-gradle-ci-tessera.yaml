@@ -244,8 +244,8 @@ jobs:
 
           upstreamTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_enabled }}
           upstreamTagShaChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_verify-sha_enabled }}
-          localFileTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker.local-file_enabled }}
-          localFileTagCheckerFile=${{ steps.pipeline-branch-config.outputs.origin-tag-checker.local-file_file }}
+          localFileTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_enabled }}
+          localFileTagCheckerFile=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_file }}
           lastTag=partior-patch
 
           if [[ "$localFileTagChecker" == "true" ]]; then
