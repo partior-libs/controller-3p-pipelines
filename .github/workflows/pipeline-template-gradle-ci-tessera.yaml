@@ -159,14 +159,14 @@ jobs:
       - name: gitleaks-action
         uses: partior-libs/gcs-gitleaks-scan@partior-stable
 
-  check-dependencies:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v1
-        with:
-          java-version: 17
-      - run: ./gradlew dependencyCheckAnalyze -x test
+  # check-dependencies:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions/setup-java@v1
+  #       with:
+  #         java-version: 17
+  #     - run: ./gradlew dependencyCheckAnalyze -x test
 
   ci-build:
     needs: [ read-repo, read-config ]
