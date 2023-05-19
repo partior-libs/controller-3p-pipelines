@@ -257,7 +257,7 @@ jobs:
         if: steps.pipeline-ci-config.outputs.artifact-auto-versioning_enabled == 'true'
         uses: partior-libs/gcs-versioning-bot@partior-stable
         with:
-          jfrog-token: ${{ secrets.JFROG_TOKEN }}
+          jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
           branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           consolidated-commit-msg: ${{ env.ALL_DELTA_COMMIT_MSG }}
