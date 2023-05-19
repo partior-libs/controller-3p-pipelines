@@ -1,7 +1,7 @@
 ---
-3p-gradle:
+3p-quorum-plugin:
   ci:
-    artifact-base-name: tessera
+    artifact-base-name: quorum-account-plugin-hashicorp-vault
     artifact-auto-versioning:
       enabled: true
       initial-release-version: 0.0.1
@@ -11,10 +11,10 @@
           file:
             enabled: true
             target: ./app-version.cfg
-            key: TESSERA-VERSION
+            key: PLUGIN-BASE-VERSION
     branches:
       default:
-        java-version: 17
+        java-version: 11
         prepare-release:
           enabled: false
         compile:
@@ -35,9 +35,9 @@
             enabled: false
         artifact:
           packager:
-            enabled: false
+            enabled: true
             jfrog-config-id: artifactoryPartior
-            group: com.partior.tessera
+            group: com.partior.quprum.plugins
             artifactory-username: NA
             artifactory-repo: 3p-gradle-dev
             artifactory-dev-repo: 3p-gradle-dev
@@ -50,24 +50,15 @@
         origin-tag-checker:
           upstream:
             enabled: true
-            api-url: repos/consensys/tessera/tags
+            api-url: repos/consensys/quorum-account-plugin-hashicorp-vault/tags
             verify-sha:
-              enabled: false
+              enabled: true
           ## if upstream is enabled, local-file will be disabled
           local-file:
-            enabled: true
+            enabled: false
             file: version.txt
-      hotfix:
-        artifact:
-          packager:
-            enabled: true
-            artifactory-repo: 3p-gradle-release
-      release:
-        artifact:
-          packager:
-            enabled: true
-            artifactory-repo: 3p-gradle-release
       main:
+        java-version: 11
         prepare-release:
           enabled: true
         artifact:

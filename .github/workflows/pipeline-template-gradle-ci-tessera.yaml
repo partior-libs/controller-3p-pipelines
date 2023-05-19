@@ -199,7 +199,7 @@ jobs:
 
 
       - name: Setup jfrog
-        uses: jfrog/setup-jfrog-cli@v2
+        uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
 
@@ -240,9 +240,17 @@ jobs:
           set +e
 
           upstreamTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_enabled }}
+          upstreamTagApiUrl=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_api-url }}
           upstreamTagShaChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_verify-sha_enabled }}
           localFileTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_enabled }}
           localFileTagCheckerFile=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_file }}
+
+          echo "[DEBUG] upstreamTagChecker=$upstreamTagChecker"
+          echo "[DEBUG] upstreamTagApiUrl=$upstreamTagApiUrl"
+          echo "[DEBUG] upstreamTagShaChecker=$upstreamTagShaChecker"
+          echo "[DEBUG] localFileTagChecker=$localFileTagChecker"
+          echo "[DEBUG] localFileTagCheckerFile=$localFileTagCheckerFile"
+
           lastTag=partior-patch
 
           if [[ "$localFileTagChecker" == "true" ]]; then
@@ -256,7 +264,7 @@ jobs:
 
           if [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "true" ]]; then
             tagListFile=taglist.txt
-            gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | [.name,.commit.sha] | join(",")' > $tagListFile
+            gh api $upstreamTagApiUrl --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | [.name,.commit.sha] | join(",")' > $tagListFile
             
             for eachTagInfo in $(cat $tagListFile); 
             do
@@ -273,7 +281,7 @@ jobs:
               fi
             done
           elif [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "false" ]]; then
-            lastTag=$(gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
+            lastTag=$(gh api $upstreamTagApiUrl --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
             lastTag=$(echo $lastTag | sed "s/tessera-//g")
             lastTag=${lastTag}_patch
           fi
