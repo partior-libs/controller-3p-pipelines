@@ -236,13 +236,48 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
         run: |
-          lastTag=$(gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
-          if [[ -z "$lastTag" ]]; then
-            lastTag=partior-patch
-          else
+          #!/bin/bash
+          set +e
+
+          upstreamTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_enabled }}
+          upstreamTagShaChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_verify-sha_enabled }}
+          localFileTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_enabled }}
+          localFileTagCheckerFile=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_file }}
+          lastTag=partior-patch
+
+          if [[ "$localFileTagChecker" == "true" ]]; then
+            if [[ ! -f "$localFileTagCheckerFile" ]]; then
+              echo "[ERROR] Unable to locate tag checker file: $localFileTagCheckerFile"
+              exit 1
+            fi
+            lastTag=$(cat $localFileTagCheckerFile | xargs)
+            lastTag=${lastTag}_patch
+          fi
+
+          if [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "true" ]]; then
+            tagListFile=taglist.txt
+            gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | [.name,.commit.sha] | join(",")' > $tagListFile
+            
+            for eachTagInfo in $(cat $tagListFile); 
+            do
+              currentTagName=$(echo $eachTagInfo | cut -d"," -f1 | xargs)
+              currentTagSha=$(echo $eachTagInfo | cut -d"," -f2 | xargs)
+              echo "[INFO] Checking currentTagSha for tag $currentTagName"
+              if (git cat-file -e $currentTagSha); then 
+                echo "[INFO] Found SHA hash";
+                lastTag=$(echo $currentTagName | sed "s/tessera-//g")
+                lastTag=${lastTag}_patch
+                break
+              else 
+                echo "[INFO] SHA hash not found.";
+              fi
+            done
+          elif [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "false" ]]; then
+            lastTag=$(gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
             lastTag=$(echo $lastTag | sed "s/tessera-//g")
             lastTag=${lastTag}_patch
           fi
+
           echo "[INFO] Last tag found: $lastTag"
           echo "TESSERA-VERSION=$lastTag" > ./app-version.cfg
           echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
