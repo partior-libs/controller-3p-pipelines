@@ -269,7 +269,7 @@ jobs:
 
   ci-build:
     name: Build on ${{ matrix.os }}
-    needs: [ pre-build ] 
+    needs: [ pre-build, read-repo, read-config ] 
     env:
       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
       ALL_DELTA_COMMIT_MSG: ${{ needs.read-repo.outputs.DELTA-COMMIT-MSG }}
