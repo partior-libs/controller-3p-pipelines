@@ -338,6 +338,39 @@ jobs:
           name: ${{ steps.meta.outputs.os_arch }}
           path: build/dist/*.*
 
+  prepare-release:
+      runs-on: ubuntu-latest
+      needs: [ read-repo, read-config, ci-build, pre-build ]
+      if: needs.read-config.outputs.PREPARE-RELEASE == 'true'
+      env:
+        ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
+        ARTIFACT_VERSION: ${{ needs.pre-build.outputs.ARTIFACT-VERSION }}
+        BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
+        COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
+        REPO_NAME: ${{ needs.read-repo.outputs.REPO-NAME }}
+        
+      steps:
+      - name: Tag release version on code baseline
+        uses: partior-libs/gcs-pipe-utils/actions/generic-git-tag@partior-stable
+        with: 
+          target-repo: "${{ github.repository }}"
+          artifact-version: "${{ env.ARTIFACT_VERSION }}"
+          target-repo-ref: "${{ env.COMMIT_HASH }}"
+          pat-token: ${{ secrets.GH_REPO_READER_TOKEN }}
+
+      - name: Create release
+        uses: partior-libs/gjs-create-release@partior-stable
+        with:
+          name: "v${{ env.ARTIFACT_VERSION }}"
+          body: "Auto generated: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_commitish: "${{ env.COMMIT_HASH }}"
+          generate_release_notes: true
+          tag_name: "v${{ env.ARTIFACT_VERSION }}"
+          repository: "${{ github.repository }}"
+          token: ${{ secrets.GH_REPO_READER_TOKEN }}
+          append_body: true
+
+
   itest:
     name: Run itests on ${{ matrix.os }}
     strategy:
@@ -420,3 +453,34 @@ jobs:
         with:
           name: ${{ matrix.os }}-testout
           path: main/internal/test/integration/testout/
+
+  spotbugs:
+    name: Spotbugs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code from SCM
+        uses: actions/checkout@v3
+
+      - name: Extract version metadata
+        id: meta
+        run: |
+          echo "os_arch=$(go env GOOS)-$(go env GOARCH)" >> $GITHUB_OUTPUT
+          echo "version=v0.0.1-SNAPSHOT" >> $GITHUB_OUTPUT
+          echo "version_short=0.0.1-SNAPSHOT" >> $GITHUB_OUTPUT
+
+      - name: Create portable linux dist
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          make VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
+
+      - name: Run Codacy Analysis CLI
+        uses: codacy/codacy-analysis-cli-action@master
+        with:
+          # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
+          # You can also omit the token and run the tools that support default configurations
+          api-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          verbose: true
+          tool: gosec
+          skip-uncommitted-files-check: true
+          upload: true
+          skip-container-engine-check: true
