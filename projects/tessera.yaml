@@ -49,7 +49,7 @@
             enabled: false
         origin-tag-checker:
           upstream:
-            enabled: true
+            enabled: false
             verify-sha:
               enabled: false
           ## if upstream is enabled, local-file will be disabled
