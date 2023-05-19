@@ -183,6 +183,9 @@ jobs:
       ARTIFACT-VERSION: ${{ steps.version-bot.outputs.artifact-version-name }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
@@ -236,695 +239,708 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
         run: |
-          lastTag=$(gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
-          if [[ -z "$lastTag" ]]; then
-            lastTag=partior-patch
-          else
-            lastTag=$(echo $lastTag | sed "s/tessera-//g")
-            lastTag=${lastTag}_patch
-          fi
+          #!/bin/bash
+          set +e
+          tagListFile=taglist.txt
+          gh api repos/consensys/tessera/tags --jq '.[] | select(.name | test("^tessera-[0-9]+\\.[0-9]+\\.[0-9]+$")) | [.name,.commit.sha] | join(",")' > $tagListFile
+          lastTag=partior-patch
+          for eachTagInfo in $(cat $tagListFile); 
+          do
+            currentTagName=$(echo $eachTagInfo | cut -d"," -f1 | xargs)
+            currentTagSha=$(echo $eachTagInfo | cut -d"," -f2 | xargs)
+            echo "[INFO] Checking currentTagSha for tag $currentTagName"
+            if (git cat-file -e $currentTagSha); then 
+              echo "[INFO] Found SHA hash";
+              lastTag=$(echo $currentTagName | sed "s/tessera-//g")
+              lastTag=${lastTag}_patch
+              break
+            else 
+              echo "[INFO] SHA hash not found.";
+            fi
+          done
+
           echo "[INFO] Last tag found: $lastTag"
           echo "TESSERA-VERSION=$lastTag" > ./app-version.cfg
           echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
 
-      - name: Start versioning bot
-        #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
-        id: version-bot
-        uses: partior-libs/gcs-versioning-bot@partior-stable
-        with:
-          jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
-          versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
-          branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
-          consolidated-commit-msg: ${{ env.DELTA-COMMIT-MSG }}
-          debug: true
+#       - name: Start versioning bot
+#         #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+#         id: version-bot
+#         uses: partior-libs/gcs-versioning-bot@partior-stable
+#         with:
+#           jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
+#           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
+#           branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+#           consolidated-commit-msg: ${{ env.DELTA-COMMIT-MSG }}
+#           debug: true
 
-      - name: Cache Gradle packages
-        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
-        uses: actions/cache@v3
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
+#       - name: Cache Gradle packages
+#         if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
+#         uses: actions/cache@v3
+#         with:
+#           path: ~/.gradle/caches
+#           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+#           restore-keys: ${{ runner.os }}-gradle
 
-      - name: Grant execute permission for gradlew
-        if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
-        run: chmod +x gradlew
+#       - name: Grant execute permission for gradlew
+#         if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
+#         run: chmod +x gradlew
 
-      - name: Tweak build config for Partior pipeline
-        run: |
-          ## Changes needed for Partior build
-          groupName="${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}"
-          lastTag="${{ steps.get-tag.outputs.last-tag }}"
-          echo "[INFO] groupName=$groupName"
-          echo "[INFO] lastTag=$lastTag"
-          echo "[INFO] version=${{ steps.version-bot.outputs.artifact-version-name }}"
-          echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
-          find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
-          sed -i "s/net.consensys.quorum.tessera/$groupName/g" build.gradle
+#       - name: Tweak build config for Partior pipeline
+#         run: |
+#           ## Changes needed for Partior build
+#           groupName="${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}"
+#           lastTag="${{ steps.get-tag.outputs.last-tag }}"
+#           echo "[INFO] groupName=$groupName"
+#           echo "[INFO] lastTag=$lastTag"
+#           echo "[INFO] version=${{ steps.version-bot.outputs.artifact-version-name }}"
+#           echo "${{ steps.version-bot.outputs.artifact-version-name }}" > version.txt
+#           find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
+#           sed -i "s/net.consensys.quorum.tessera/$groupName/g" build.gradle
 
-      # Run the build 
-      - name: Build
-        run: |
-          ## Fix build issue with jfrog apiVersion: v1
-          find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
+#       # Run the build 
+#       - name: Build
+#         run: |
+#           ## Fix build issue with jfrog apiVersion: v1
+#           find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
           
-          jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
+#           jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
 
-      - name: Upload kalium encryptor dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: kalium-dist
-          path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
+#       - name: Upload kalium encryptor dist
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: kalium-dist
+#           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
 
-      - name: Publish to artifactory
-        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
-        run: |
-          ## Setting up GPG keys
-          echo "${GPG_SECRET_KEYS}" | base64 --decode | gpg --import --no-tty --batch --yes
-          echo ${GPG_OWNERTRUST} | base64 --decode | gpg --import-ownertrust
-          gpg -k
-          pubkey=`gpg --list-keys -a techservices-devsecops@partior.com|head -2|tail -1|xargs`
-          echo "[DEBUG] Pubkey: $pubkey"
+#       - name: Publish to artifactory
+#         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
+#         run: |
+#           ## Setting up GPG keys
+#           echo "${GPG_SECRET_KEYS}" | base64 --decode | gpg --import --no-tty --batch --yes
+#           echo ${GPG_OWNERTRUST} | base64 --decode | gpg --import-ownertrust
+#           gpg -k
+#           pubkey=`gpg --list-keys -a techservices-devsecops@partior.com|head -2|tail -1|xargs`
+#           echo "[DEBUG] Pubkey: $pubkey"
 
-          echo "[INFO] Upload to Artifactory"
-          jf gradle clean artifactoryPublish -Psigning.gnupg.keyName=$pubkey -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
+#           echo "[INFO] Upload to Artifactory"
+#           jf gradle clean artifactoryPublish -Psigning.gnupg.keyName=$pubkey -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
                     
-          jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+#           jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
 
-      - name: Upload tessera dist
-        uses: actions/upload-artifact@v3
-        if: success()
-        with:
-          name: tessera-dists
-          path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
-      - name: Upload tessera enclave dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: enclave-dists
-          path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
-      - name: Upload aws key vault dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: aws-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
-      - name: Upload azure key vault dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: azure-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
-      - name: Upload hashicorp key vault dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: hashicorp-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
+#       - name: Upload tessera dist
+#         uses: actions/upload-artifact@v3
+#         if: success()
+#         with:
+#           name: tessera-dists
+#           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
+#       - name: Upload tessera enclave dist
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: enclave-dists
+#           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
+#       - name: Upload aws key vault dist
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: aws-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
+#       - name: Upload azure key vault dist
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: azure-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
+#       - name: Upload hashicorp key vault dist
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: hashicorp-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
 
-      # - name: Git config
-      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-      #   run: |
-      #     git config user.name github-actions
-      #     git config user.email github-actions@github.com
+#       # - name: Git config
+#       #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+#       #   run: |
+#       #     git config user.name github-actions
+#       #     git config user.email github-actions@github.com
 
-      # - name: Create new tag
-      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-      #   run: git tag -f v${{ steps.version-bot.outputs.artifact-version-name }}
+#       # - name: Create new tag
+#       #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+#       #   run: git tag -f v${{ steps.version-bot.outputs.artifact-version-name }}
 
-      # - name: Push new tag
-      #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
-      #   run: git push origin v${{ steps.version-bot.outputs.artifact-version-name }} --force
+#       # - name: Push new tag
+#       #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
+#       #   run: git push origin v${{ steps.version-bot.outputs.artifact-version-name }} --force
 
-  spotbugs:
-    name: Spotbugs
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code from SCM
-      uses: actions/checkout@v3
-    - name: Set up Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: 17
-        check-latest: true
-    - name: Execute gradle test
-      run: ./gradlew test -x dependencyCheckAnalyze -x :tests:acceptance-test:test -x javadoc --info
+#   spotbugs:
+#     name: Spotbugs
+#     runs-on: ubuntu-latest
+#     steps:
+#     - name: Checkout code from SCM
+#       uses: actions/checkout@v3
+#     - name: Set up Java
+#       uses: actions/setup-java@v3
+#       with:
+#         distribution: 'adopt'
+#         java-version: 17
+#         check-latest: true
+#     - name: Execute gradle test
+#       run: ./gradlew test -x dependencyCheckAnalyze -x :tests:acceptance-test:test -x javadoc --info
 
-    - name: Run Codacy Analysis CLI
-      uses: codacy/codacy-analysis-cli-action@master
-      with:
-        # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
-        # You can also omit the token and run the tools that support default configurations
-        api-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-        verbose: true
-        tool: spotbugs
-        skip-uncommitted-files-check: true
-        upload: true
-        skip-container-engine-check: true
+#     - name: Run Codacy Analysis CLI
+#       uses: codacy/codacy-analysis-cli-action@master
+#       with:
+#         # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
+#         # You can also omit the token and run the tools that support default configurations
+#         api-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+#         verbose: true
+#         tool: spotbugs
+#         skip-uncommitted-files-check: true
+#         upload: true
+#         skip-container-engine-check: true
 
-  test:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code from SCM
-      uses: actions/checkout@v3
-    - name: Set up Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: 17
-        check-latest: true
-    - name: Execute gradle test
-      run: ./gradlew test -x dependencyCheckAnalyze -x :tests:acceptance-test:test -x javadoc --info
+#   test:
+#     name: Unit tests
+#     runs-on: ubuntu-latest
+#     steps:
+#     - name: Checkout code from SCM
+#       uses: actions/checkout@v3
+#     - name: Set up Java
+#       uses: actions/setup-java@v3
+#       with:
+#         distribution: 'adopt'
+#         java-version: 17
+#         check-latest: true
+#     - name: Execute gradle test
+#       run: ./gradlew test -x dependencyCheckAnalyze -x :tests:acceptance-test:test -x javadoc --info
 
-  itest:
-    name: Integration tests
-    needs: [ci-build]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code from SCM
-      uses: actions/checkout@v3
-    - name: Set up Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: 17
-        check-latest: true
-    - name: Download tessera dist
-      uses: actions/download-artifact@v3
-      with:
-        name: tessera-dists
-        path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
-    - name: Download tessera enclave dist
-      uses: actions/download-artifact@v3
-      with:
-        name: enclave-dists
-        path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
-    - name: Download aws key vault dist
-      uses: actions/download-artifact@v3
-      with:
-        name: aws-key-vault-dist
-        path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
-    - name: Download azure key vault dist
-      uses: actions/download-artifact@v3
-      with:
-        name: azure-key-vault-dist
-        path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
-    - name: Download hashicorp key vault dist
-      uses: actions/download-artifact@v3
-      with:
-        name: hashicorp-key-vault-dist
-        path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
-    - name: Download kalium encryptor dist
-      uses: actions/download-artifact@v3
-      with:
-        name: kalium-dist
-        path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
-    - name: Execute gradle integration tests
-      run: |
-        echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
-        ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --fail-fast -PexcludeTests="RunHashicorpIT,AwsKeyVaultIT,RecoverIT,RunAzureIT,RestSuiteHttpH2RemoteEnclaveEncTypeEC,CucumberTestSuite" --info
-    - name: Upload Junit reports
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-       name: itest-junit-report
-       path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
-    - name: Upload test logs
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-       name: itest-logs
-       path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
+#   itest:
+#     name: Integration tests
+#     needs: [ci-build]
+#     runs-on: ubuntu-latest
+#     steps:
+#     - name: Checkout code from SCM
+#       uses: actions/checkout@v3
+#     - name: Set up Java
+#       uses: actions/setup-java@v3
+#       with:
+#         distribution: 'adopt'
+#         java-version: 17
+#         check-latest: true
+#     - name: Download tessera dist
+#       uses: actions/download-artifact@v3
+#       with:
+#         name: tessera-dists
+#         path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
+#     - name: Download tessera enclave dist
+#       uses: actions/download-artifact@v3
+#       with:
+#         name: enclave-dists
+#         path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
+#     - name: Download aws key vault dist
+#       uses: actions/download-artifact@v3
+#       with:
+#         name: aws-key-vault-dist
+#         path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
+#     - name: Download azure key vault dist
+#       uses: actions/download-artifact@v3
+#       with:
+#         name: azure-key-vault-dist
+#         path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
+#     - name: Download hashicorp key vault dist
+#       uses: actions/download-artifact@v3
+#       with:
+#         name: hashicorp-key-vault-dist
+#         path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
+#     - name: Download kalium encryptor dist
+#       uses: actions/download-artifact@v3
+#       with:
+#         name: kalium-dist
+#         path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
+#     - name: Execute gradle integration tests
+#       run: |
+#         echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
+#         ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --fail-fast -PexcludeTests="RunHashicorpIT,AwsKeyVaultIT,RecoverIT,RunAzureIT,RestSuiteHttpH2RemoteEnclaveEncTypeEC,CucumberTestSuite" --info
+#     - name: Upload Junit reports
+#       uses: actions/upload-artifact@v3
+#       if: always()
+#       with:
+#        name: itest-junit-report
+#        path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
+#     - name: Upload test logs
+#       uses: actions/upload-artifact@v3
+#       if: always()
+#       with:
+#        name: itest-logs
+#        path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
 
-  remote_enclave_itest:
-    name: Remote enclave integration tests
-    needs: [ci-build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code from SCM
-        uses: actions/checkout@v3
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'adopt'
-          java-version: 17
-          check-latest: true
-      - name: Download tessera dist
-        uses: actions/download-artifact@v3
-        with:
-          name: tessera-dists
-          path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
-      - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
-        with:
-          name: enclave-dists
-          path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
-      - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: aws-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
-      - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: azure-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
-      - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: hashicorp-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
-      - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
-        with:
-          name: kalium-dist
-          path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
-      - name: Execute gradle integration tests
-        run: |
-          echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
-          ./gradlew :tests:acceptance-test:test --tests RestSuiteHttpH2RemoteEnclave --tests RestSuiteHttpH2RemoteEnclaveEncTypeEC --info
-      - name: Upload junit reports
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: remote_enclave_itest-junit-report
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: remote_enclave_itest-logs
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
+#   remote_enclave_itest:
+#     name: Remote enclave integration tests
+#     needs: [ci-build]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code from SCM
+#         uses: actions/checkout@v3
+#       - name: Set up Java
+#         uses: actions/setup-java@v3
+#         with:
+#           distribution: 'adopt'
+#           java-version: 17
+#           check-latest: true
+#       - name: Download tessera dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: tessera-dists
+#           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
+#       - name: Download tessera enclave dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: enclave-dists
+#           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
+#       - name: Download aws key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: aws-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
+#       - name: Download azure key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: azure-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
+#       - name: Download hashicorp key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: hashicorp-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
+#       - name: Download kalium encryptor dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: kalium-dist
+#           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
+#       - name: Execute gradle integration tests
+#         run: |
+#           echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
+#           ./gradlew :tests:acceptance-test:test --tests RestSuiteHttpH2RemoteEnclave --tests RestSuiteHttpH2RemoteEnclaveEncTypeEC --info
+#       - name: Upload junit reports
+#         uses: actions/upload-artifact@v3
+#         if: always()
+#         with:
+#           name: remote_enclave_itest-junit-report
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
+#       - name: Upload test logs
+#         uses: actions/upload-artifact@v3
+#         if: always()
+#         with:
+#           name: remote_enclave_itest-logs
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
 
-  cucumber_itest:
-    name: Cucumber itests
-    needs: [ci-build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code from SCM
-        uses: actions/checkout@v3
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'adopt'
-          java-version: 17
-          check-latest: true
-      - name: Download tessera dist
-        uses: actions/download-artifact@v3
-        with:
-          name: tessera-dists
-          path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
-      - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
-        with:
-          name: enclave-dists
-          path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
-      - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: aws-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
-      - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: azure-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
-      - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: hashicorp-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
-      - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
-        with:
-          name: kalium-dist
-          path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
-      - name: Execute gradle
-        run: |
-          echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
-          ## Disable CLI test because this is Partior's build version
-          sed -i "s/CucumberVersionCliIT.class//g" tests/acceptance-test/src/test/java/com/quorum/tessera/test/CucumberTestSuite.java
+#   cucumber_itest:
+#     name: Cucumber itests
+#     needs: [ci-build]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code from SCM
+#         uses: actions/checkout@v3
+#       - name: Set up Java
+#         uses: actions/setup-java@v3
+#         with:
+#           distribution: 'adopt'
+#           java-version: 17
+#           check-latest: true
+#       - name: Download tessera dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: tessera-dists
+#           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
+#       - name: Download tessera enclave dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: enclave-dists
+#           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
+#       - name: Download aws key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: aws-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
+#       - name: Download azure key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: azure-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
+#       - name: Download hashicorp key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: hashicorp-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
+#       - name: Download kalium encryptor dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: kalium-dist
+#           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
+#       - name: Execute gradle
+#         run: |
+#           echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
+#           ## Disable CLI test because this is Partior's build version
+#           sed -i "s/CucumberVersionCliIT.class//g" tests/acceptance-test/src/test/java/com/quorum/tessera/test/CucumberTestSuite.java
 
-          ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --tests CucumberTestSuite --info
-      - name: Upload junit reports
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: cucumber_itest-junit-report
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: cucumber_itest-logs
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
+#           ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --tests CucumberTestSuite --info
+#       - name: Upload junit reports
+#         uses: actions/upload-artifact@v3
+#         if: always()
+#         with:
+#           name: cucumber_itest-junit-report
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
+#       - name: Upload test logs
+#         uses: actions/upload-artifact@v3
+#         if: always()
+#         with:
+#           name: cucumber_itest-logs
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
 
-  vaultTests:
-    name: Key vault integration tests
-    needs: [ci-build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code from SCM
-        uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
-        with:
-          distribution: 'adopt'
-          java-version: 17
-          check-latest: true
-      - name: Download tessera dist
-        uses: actions/download-artifact@v3
-        with:
-          name: tessera-dists
-          path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
-      - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
-        with:
-          name: enclave-dists
-          path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
-      - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: aws-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
-      - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: azure-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
-      - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: hashicorp-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
-      - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
-        with:
-          name: kalium-dist
-          path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
-      - name: Run AWS tests
-        run: |
-          echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
-          ./gradlew :tests:acceptance-test:test --tests AwsKeyVaultIT --info
-#      - name: Run azure tests
-#        run: |
-#          ./gradlew :tests:acceptance-test:test --tests RunAzureIT --info
-      - name: Run hashicorp tests
-        run: |
-          wget https://releases.hashicorp.com/vault/1.2.2/vault_1.2.2_linux_amd64.zip -O /tmp/vault_1.2.2_linux_amd64.zip
-          mkdir -p vault/bin && pushd $_
-          unzip /tmp/vault_1.2.2_linux_amd64.zip
-          export PATH=$PATH:$PWD && popd
-          ./gradlew :tests:acceptance-test:test --tests RunHashicorpIT --info
-      - name: Upload junit reports
-        uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: vault-itest-junit-report
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: vault-itest-logs
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
+#   vaultTests:
+#     name: Key vault integration tests
+#     needs: [ci-build]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code from SCM
+#         uses: actions/checkout@v3
+#       - uses: actions/setup-java@v3
+#         with:
+#           distribution: 'adopt'
+#           java-version: 17
+#           check-latest: true
+#       - name: Download tessera dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: tessera-dists
+#           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
+#       - name: Download tessera enclave dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: enclave-dists
+#           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
+#       - name: Download aws key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: aws-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
+#       - name: Download azure key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: azure-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
+#       - name: Download hashicorp key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: hashicorp-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
+#       - name: Download kalium encryptor dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: kalium-dist
+#           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
+#       - name: Run AWS tests
+#         run: |
+#           echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
+#           ./gradlew :tests:acceptance-test:test --tests AwsKeyVaultIT --info
+# #      - name: Run azure tests
+# #        run: |
+# #          ./gradlew :tests:acceptance-test:test --tests RunAzureIT --info
+#       - name: Run hashicorp tests
+#         run: |
+#           wget https://releases.hashicorp.com/vault/1.2.2/vault_1.2.2_linux_amd64.zip -O /tmp/vault_1.2.2_linux_amd64.zip
+#           mkdir -p vault/bin && pushd $_
+#           unzip /tmp/vault_1.2.2_linux_amd64.zip
+#           export PATH=$PATH:$PWD && popd
+#           ./gradlew :tests:acceptance-test:test --tests RunHashicorpIT --info
+#       - name: Upload junit reports
+#         uses: actions/upload-artifact@v3
+#         if: failure()
+#         with:
+#           name: vault-itest-junit-report
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
+#       - name: Upload test logs
+#         uses: actions/upload-artifact@v3
+#         if: failure()
+#         with:
+#           name: vault-itest-logs
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
 
-  recovery_itest:
-    name: Recovery integration tests
-    needs: [ci-build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code from SCM
-        uses: actions/checkout@v3
-      - name: Set up java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'adopt'
-          java-version: 17
-          check-latest: true
-      - name: Download tessera dist
-        uses: actions/download-artifact@v3
-        with:
-          name: tessera-dists
-          path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
-      - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
-        with:
-          name: enclave-dists
-          path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
-      - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: aws-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
-      - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: azure-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
-      - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
-        with:
-          name: hashicorp-key-vault-dist
-          path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
-      - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
-        with:
-          name: kalium-dist
-          path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
-      - name: Execute tests
-        run: |
-          echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
-          ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --tests RecoverIT --info
-      - name: Upload junit reports
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: recovery_itest-junit-report
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: recovery-itest-logs
-          path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
+#   recovery_itest:
+#     name: Recovery integration tests
+#     needs: [ci-build]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code from SCM
+#         uses: actions/checkout@v3
+#       - name: Set up java
+#         uses: actions/setup-java@v3
+#         with:
+#           distribution: 'adopt'
+#           java-version: 17
+#           check-latest: true
+#       - name: Download tessera dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: tessera-dists
+#           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
+#       - name: Download tessera enclave dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: enclave-dists
+#           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
+#       - name: Download aws key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: aws-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
+#       - name: Download azure key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: azure-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
+#       - name: Download hashicorp key vault dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: hashicorp-key-vault-dist
+#           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
+#       - name: Download kalium encryptor dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: kalium-dist
+#           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
+#       - name: Execute tests
+#         run: |
+#           echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
+#           ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --tests RecoverIT --info
+#       - name: Upload junit reports
+#         uses: actions/upload-artifact@v3
+#         if: always()
+#         with:
+#           name: recovery_itest-junit-report
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
+#       - name: Upload test logs
+#         uses: actions/upload-artifact@v3
+#         if: always()
+#         with:
+#           name: recovery-itest-logs
+#           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/logs
 
-  build_image:
-    name: Build develop Docker image
-    needs: [ci-build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code from SCM
-        uses: actions/checkout@v3
-      - name: Download tessera dist
-        uses: actions/download-artifact@v3
-        with:
-          name: tessera-dists
-          path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Get current date-time (RFC 3339 standard)
-        id: date
-        run: echo "::set-output name=now::$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-      - name: Build Docker image as portable tar
-        uses: docker/build-push-action@v2
-        with:
-          tags: ${{ env.TESSERA_DOCKER_IMAGE }}:develop
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ steps.date.outputs.now }}
-          push: false
-          file: docker/tessera.Dockerfile
-          # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
-          context: .
-          outputs: type=docker,dest=/tmp/tessera-develop-image.tar
-      - name: upload-artifact portable Docker image
-        uses: actions/upload-artifact@v3
-        with:
-          name: tessera-develop-image
-          path: /tmp/tessera-develop-image.tar
+#   build_image:
+#     name: Build develop Docker image
+#     needs: [ci-build]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code from SCM
+#         uses: actions/checkout@v3
+#       - name: Download tessera dist
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: tessera-dists
+#           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v1
+#       - name: Get current date-time (RFC 3339 standard)
+#         id: date
+#         run: echo "::set-output name=now::$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+#       - name: Build Docker image as portable tar
+#         uses: docker/build-push-action@v2
+#         with:
+#           tags: ${{ env.TESSERA_DOCKER_IMAGE }}:develop
+#           labels: |
+#             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+#             org.opencontainers.image.revision=${{ github.sha }}
+#             org.opencontainers.image.created=${{ steps.date.outputs.now }}
+#           push: false
+#           file: docker/tessera.Dockerfile
+#           # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
+#           context: .
+#           outputs: type=docker,dest=/tmp/tessera-develop-image.tar
+#       - name: upload-artifact portable Docker image
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: tessera-develop-image
+#           path: /tmp/tessera-develop-image.tar
 
-  atest:
-    name: Quorum acceptance tests
-    needs: [ci-build, build_image]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code from SCM
-        uses: actions/checkout@v3
-      - name: Set up java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'adopt'
-          java-version: 14
-          check-latest: true
-      - name: download-artifact portable Docker image
-        uses: actions/download-artifact@v3
-        with:
-          name: tessera-develop-image
-          path: /tmp
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Load image
-        run: |
-          docker load --input /tmp/tessera-develop-image.tar
-          docker image ls -a
-      - name: Execute acceptance tests
-        run:
-          docker run --entrypoint /bin/sh --network host -v /tmp/run/sh:/tmp/run.sh -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/acctests:/tmp/acctests -e TF_VAR_tessera_docker_image='{name="${{ env.TESSERA_DOCKER_IMAGE }}:develop",local=true}' -e TF_VAR_quorum_docker_image='{name="${{ env.QUORUM_DOCKER_IMAGE }}:latest",local=false}' quorumengineering/acctests:latest -c "./mvnw --no-transfer-progress -B -DskipToolsCheck test -Pauto -Dtags='\!async && (basic || basic-istanbul || networks/typical::istanbul)' -Dauto.outputDir=/tmp/acctests -Dnetwork.forceDestroy=true && cp -R /workspace/target/gauge /tmp/acctests/gauge && chmod -R 775 /tmp/acctests/gauge"
-      - name: Upload Gauge report
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: gauge-reports
-          path: /tmp/acctests/gauge
+#   atest:
+#     name: Quorum acceptance tests
+#     needs: [ci-build, build_image]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code from SCM
+#         uses: actions/checkout@v3
+#       - name: Set up java
+#         uses: actions/setup-java@v3
+#         with:
+#           distribution: 'adopt'
+#           java-version: 14
+#           check-latest: true
+#       - name: download-artifact portable Docker image
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: tessera-develop-image
+#           path: /tmp
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v1
+#       - name: Load image
+#         run: |
+#           docker load --input /tmp/tessera-develop-image.tar
+#           docker image ls -a
+#       - name: Execute acceptance tests
+#         run:
+#           docker run --entrypoint /bin/sh --network host -v /tmp/run/sh:/tmp/run.sh -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/acctests:/tmp/acctests -e TF_VAR_tessera_docker_image='{name="${{ env.TESSERA_DOCKER_IMAGE }}:develop",local=true}' -e TF_VAR_quorum_docker_image='{name="${{ env.QUORUM_DOCKER_IMAGE }}:latest",local=false}' quorumengineering/acctests:latest -c "./mvnw --no-transfer-progress -B -DskipToolsCheck test -Pauto -Dtags='\!async && (basic || basic-istanbul || networks/typical::istanbul)' -Dauto.outputDir=/tmp/acctests -Dnetwork.forceDestroy=true && cp -R /workspace/target/gauge /tmp/acctests/gauge && chmod -R 775 /tmp/acctests/gauge"
+#       - name: Upload Gauge report
+#         uses: actions/upload-artifact@v3
+#         if: always()
+#         with:
+#           name: gauge-reports
+#           path: /tmp/acctests/gauge
 
-  # release-docker:
-  #   needs: [ ci-build ]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code from SCM
-  #       uses: actions/checkout@v3
-  #     - name: Download tessera dists
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: tessera-dists
-  #         path: tessera-dist/build/distributions/
-  #     - name: Download enclave dists
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: enclave-dists
-  #         path: enclave/enclave-jaxrs/build/distributions/
-  #     - name: Download azure-key-vault dists
-  #       uses: actions/download-artifact@v3
-  #       if: success()
-  #       with:
-  #         name: azure-key-vault-dists
-  #         path: key-vault/azure-key-vault/build/distributions/
-  #     - name: Download aws-key-vault dists
-  #       uses: actions/download-artifact@v3
-  #       if: success()
-  #       with:
-  #         name: aws-key-vault-dists
-  #         path: key-vault/aws-key-vault/build/distributions/
-  #     - name: Download hashicorp-key-vault dists
-  #       uses: actions/download-artifact@v3
-  #       if: success()
-  #       with:
-  #         name: hashicorp-key-vault-dists
-  #         path: key-vault/hashicorp-key-vault/build/distributions/
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v1
-  #     - name: Login to DockerHub
-  #       uses: docker/login-action@v1
-  #       with:
-  #         username: ${{ secrets.DOCKER_USERNAME }}
-  #         password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
-  #     - name: Get current date-time (RFC 3339 standard)
-  #       id: date
-  #       run: |
-  #         echo "::set-output name=now::$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  #     - name: Build and push standalone tessera images
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         tags: |
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:latest
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:${{ needs.check-version.outputs.minor-version }}
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:${{ needs.check-version.outputs.full-version }}
-  #         labels: |
-  #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
-  #           org.opencontainers.image.revision=${{ github.sha }}
-  #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
-  #         push: true
-  #         file: docker/tessera.Dockerfile
-  #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
-  #         context: .
-  #     - name: Build and push tessera+azure images
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         tags: |
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:azure-latest
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:azure-${{ needs.check-version.outputs.minor-version }}
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:azure-${{ needs.check-version.outputs.full-version }}
-  #         labels: |
-  #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
-  #           org.opencontainers.image.revision=${{ github.sha }}
-  #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
-  #         push: true
-  #         file: docker/tessera.azure.Dockerfile
-  #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
-  #         context: .
-  #     - name: Build and push tessera+aws images
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         tags: |
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:aws-latest
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:aws-${{ needs.check-version.outputs.minor-version }}
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:aws-${{ needs.check-version.outputs.full-version }}
-  #         labels: |
-  #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
-  #           org.opencontainers.image.revision=${{ github.sha }}
-  #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
-  #         push: true
-  #         file: docker/tessera.aws.Dockerfile
-  #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
-  #         context: .
-  #     - name: Build and push tessera+hashicorp images
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         tags: |
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:hashicorp-latest
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:hashicorp-${{ needs.check-version.outputs.minor-version }}
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:hashicorp-${{ needs.check-version.outputs.full-version }}
-  #         labels: |
-  #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
-  #           org.opencontainers.image.revision=${{ github.sha }}
-  #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
-  #         push: true
-  #         file: docker/tessera.hashicorp.Dockerfile
-  #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
-  #         context: .
-  #     - name: Build and push standalone enclave images
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         tags: |
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:enclave-latest
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:enclave-${{ needs.check-version.outputs.minor-version }}
-  #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:enclave-${{ needs.check-version.outputs.full-version }}
-  #         labels: |
-  #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
-  #           org.opencontainers.image.revision=${{ github.sha }}
-  #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
-  #         push: true
-  #         file: docker/enclave.Dockerfile
-  #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
-  #         context: .
+#   # release-docker:
+#   #   needs: [ ci-build ]
+#   #   runs-on: ubuntu-latest
+#   #   steps:
+#   #     - name: Checkout code from SCM
+#   #       uses: actions/checkout@v3
+#   #     - name: Download tessera dists
+#   #       uses: actions/download-artifact@v3
+#   #       with:
+#   #         name: tessera-dists
+#   #         path: tessera-dist/build/distributions/
+#   #     - name: Download enclave dists
+#   #       uses: actions/download-artifact@v3
+#   #       with:
+#   #         name: enclave-dists
+#   #         path: enclave/enclave-jaxrs/build/distributions/
+#   #     - name: Download azure-key-vault dists
+#   #       uses: actions/download-artifact@v3
+#   #       if: success()
+#   #       with:
+#   #         name: azure-key-vault-dists
+#   #         path: key-vault/azure-key-vault/build/distributions/
+#   #     - name: Download aws-key-vault dists
+#   #       uses: actions/download-artifact@v3
+#   #       if: success()
+#   #       with:
+#   #         name: aws-key-vault-dists
+#   #         path: key-vault/aws-key-vault/build/distributions/
+#   #     - name: Download hashicorp-key-vault dists
+#   #       uses: actions/download-artifact@v3
+#   #       if: success()
+#   #       with:
+#   #         name: hashicorp-key-vault-dists
+#   #         path: key-vault/hashicorp-key-vault/build/distributions/
+#   #     - name: Set up Docker Buildx
+#   #       uses: docker/setup-buildx-action@v1
+#   #     - name: Login to DockerHub
+#   #       uses: docker/login-action@v1
+#   #       with:
+#   #         username: ${{ secrets.DOCKER_USERNAME }}
+#   #         password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+#   #     - name: Get current date-time (RFC 3339 standard)
+#   #       id: date
+#   #       run: |
+#   #         echo "::set-output name=now::$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+#   #     - name: Build and push standalone tessera images
+#   #       uses: docker/build-push-action@v2
+#   #       with:
+#   #         tags: |
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:latest
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:${{ needs.check-version.outputs.minor-version }}
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:${{ needs.check-version.outputs.full-version }}
+#   #         labels: |
+#   #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
+#   #           org.opencontainers.image.revision=${{ github.sha }}
+#   #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
+#   #         push: true
+#   #         file: docker/tessera.Dockerfile
+#   #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
+#   #         context: .
+#   #     - name: Build and push tessera+azure images
+#   #       uses: docker/build-push-action@v2
+#   #       with:
+#   #         tags: |
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:azure-latest
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:azure-${{ needs.check-version.outputs.minor-version }}
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:azure-${{ needs.check-version.outputs.full-version }}
+#   #         labels: |
+#   #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
+#   #           org.opencontainers.image.revision=${{ github.sha }}
+#   #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
+#   #         push: true
+#   #         file: docker/tessera.azure.Dockerfile
+#   #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
+#   #         context: .
+#   #     - name: Build and push tessera+aws images
+#   #       uses: docker/build-push-action@v2
+#   #       with:
+#   #         tags: |
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:aws-latest
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:aws-${{ needs.check-version.outputs.minor-version }}
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:aws-${{ needs.check-version.outputs.full-version }}
+#   #         labels: |
+#   #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
+#   #           org.opencontainers.image.revision=${{ github.sha }}
+#   #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
+#   #         push: true
+#   #         file: docker/tessera.aws.Dockerfile
+#   #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
+#   #         context: .
+#   #     - name: Build and push tessera+hashicorp images
+#   #       uses: docker/build-push-action@v2
+#   #       with:
+#   #         tags: |
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:hashicorp-latest
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:hashicorp-${{ needs.check-version.outputs.minor-version }}
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:hashicorp-${{ needs.check-version.outputs.full-version }}
+#   #         labels: |
+#   #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
+#   #           org.opencontainers.image.revision=${{ github.sha }}
+#   #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
+#   #         push: true
+#   #         file: docker/tessera.hashicorp.Dockerfile
+#   #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
+#   #         context: .
+#   #     - name: Build and push standalone enclave images
+#   #       uses: docker/build-push-action@v2
+#   #       with:
+#   #         tags: |
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:enclave-latest
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:enclave-${{ needs.check-version.outputs.minor-version }}
+#   #           ${{ env.TESSERA_DOCKER_IMAGE_NAME }}:enclave-${{ needs.check-version.outputs.full-version }}
+#   #         labels: |
+#   #           org.opencontainers.image.source=https://github.com/${{ github.repository }}
+#   #           org.opencontainers.image.revision=${{ github.sha }}
+#   #           org.opencontainers.image.created=${{ steps.date.outputs.now }}
+#   #         push: true
+#   #         file: docker/enclave.Dockerfile
+#   #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
+#   #         context: .
 
-  prepare-release:
-      runs-on: ubuntu-latest
-      needs: [ read-repo, read-config, ci-build ]
-      if: needs.read-config.outputs.PREPARE-RELEASE == 'true'
-      env:
-        ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
-        ARTIFACT_VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
-        BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
-        COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
-        REPO_NAME: ${{ needs.read-repo.outputs.REPO-NAME }}
+#   prepare-release:
+#       runs-on: ubuntu-latest
+#       needs: [ read-repo, read-config, ci-build ]
+#       if: needs.read-config.outputs.PREPARE-RELEASE == 'true'
+#       env:
+#         ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
+#         ARTIFACT_VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
+#         BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
+#         COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
+#         REPO_NAME: ${{ needs.read-repo.outputs.REPO-NAME }}
         
-      steps:
-      - name: Tag release version on code baseline
-        uses: partior-libs/gcs-pipe-utils/actions/generic-git-tag@partior-stable
-        with: 
-          target-repo: "${{ github.repository }}"
-          artifact-version: "${{ env.ARTIFACT_VERSION }}"
-          target-repo-ref: "${{ env.COMMIT_HASH }}"
-          pat-token: ${{ secrets.GH_REPO_READER_TOKEN }}
+#       steps:
+#       - name: Tag release version on code baseline
+#         uses: partior-libs/gcs-pipe-utils/actions/generic-git-tag@partior-stable
+#         with: 
+#           target-repo: "${{ github.repository }}"
+#           artifact-version: "${{ env.ARTIFACT_VERSION }}"
+#           target-repo-ref: "${{ env.COMMIT_HASH }}"
+#           pat-token: ${{ secrets.GH_REPO_READER_TOKEN }}
 
-      - name: Create release
-        uses: partior-libs/gjs-create-release@partior-stable
-        with:
-          name: "v${{ env.ARTIFACT_VERSION }}"
-          body: "Auto generated: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          target_commitish: "${{ env.COMMIT_HASH }}"
-          generate_release_notes: true
-          tag_name: "v${{ env.ARTIFACT_VERSION }}"
-          repository: "${{ github.repository }}"
-          token: ${{ secrets.GH_REPO_READER_TOKEN }}
-          append_body: true
+#       - name: Create release
+#         uses: partior-libs/gjs-create-release@partior-stable
+#         with:
+#           name: "v${{ env.ARTIFACT_VERSION }}"
+#           body: "Auto generated: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#           target_commitish: "${{ env.COMMIT_HASH }}"
+#           generate_release_notes: true
+#           tag_name: "v${{ env.ARTIFACT_VERSION }}"
+#           repository: "${{ github.repository }}"
+#           token: ${{ secrets.GH_REPO_READER_TOKEN }}
+#           append_body: true
