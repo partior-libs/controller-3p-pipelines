@@ -345,13 +345,15 @@ jobs:
           zipFilename=$(basename "$targetArtifactFile")
           checksumFilename=$(basename "$targetArtifactChksumFile")
           baseDir=$(dirname "$targetArtifactFile")
+          groupID=${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}
+          groupID=$(echo $groupID | sed "s/\./\//g" | xargs)
 
           cd $baseDir
-          jfrog rt u $zipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/
-          jfrog rt u $checksumFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/
+          jfrog rt u $zipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/
+          jfrog rt u $checksumFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/
           jfrog rt bp
           jfrog rt sp \
-            "${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$zipFilename" \
+            "${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$zipFilename" \
             "git.commit_hash=${COMMIT_HASH};github.pr_number=${PR_NUMBER};github.pr_target_branch=${PR_TARGET_BRANCH};git.source_branch=${SOURCE_BRANCH};promotion.qualified=false"
 
 
