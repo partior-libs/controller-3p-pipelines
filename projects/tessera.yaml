@@ -35,7 +35,7 @@
             enabled: false
         artifact:
           packager:
-            enabled: true
+            enabled: false
             jfrog-config-id: artifactoryPartior
             group: com.partior.tessera
             artifactory-username: NA
@@ -47,8 +47,17 @@
             enabled: false
           jira-issue:
             enabled: false
+      hotfix:
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-gradle-release
+      release:
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-gradle-release
       main:
-        java-version: 11
         prepare-release:
           enabled: true
         artifact:

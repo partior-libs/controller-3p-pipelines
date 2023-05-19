@@ -212,11 +212,11 @@ jobs:
           echo "::add-mask::${accessToken}"
           echo "[INFO] accessUsername: $accessUsername"
 
-      - name: Setup Java 17
+      - name: Setup Java ${{ steps.pipeline-branch-config.outputs.java-version }}
         uses: actions/setup-java@v3
         with:
           distribution: 'adopt'
-          java-version: 17
+          java-version: ${{ steps.pipeline-branch-config.outputs.java-version }}
           
       - name: Setup Jfrog Gradle Config
         if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
