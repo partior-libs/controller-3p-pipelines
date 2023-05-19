@@ -6,11 +6,11 @@
       enabled: true
       initial-release-version: 0.0.1
       version-sources:
-          jira:
-            enabled: false
-            ## Comma delimited, example: DEVPILOT,DSO
-            project-keys: DEVPILOT
-            version-identifier: "DUMMY"
+        jira:
+          enabled: false
+          ## Comma delimited, example: DEVPILOT,DSO
+          project-keys: DEVPILOT
+          version-identifier: "DUMMY"
       prepend-version:
         enabled: false
         rules:

@@ -259,6 +259,8 @@ jobs:
           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
           branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           consolidated-commit-msg: ${{ env.DELTA-COMMIT-MSG }}
+          jira-username: ${{ secrets.JIRA_USERNAME }}
+          jira-password: ${{ secrets.JIRA_PASSWORD }}
           debug: true
 
       - name: Publish to artifactory

@@ -11,6 +11,12 @@
             ## Comma delimited, example: DEVPILOT,DSO
             project-keys: DEVPILOT
             version-identifier: "DUMMY"
+      version-sources:
+          jira:
+            enabled: false
+            ## Comma delimited, example: DEVPILOT,DSO
+            project-keys: DEVPILOT
+            version-identifier: "DUMMY"
       prepend-version:
         enabled: false
         rules:

@@ -185,7 +185,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          
+
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
@@ -302,6 +302,8 @@ jobs:
           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
           branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           consolidated-commit-msg: ${{ env.DELTA-COMMIT-MSG }}
+          jira-username: ${{ secrets.JIRA_USERNAME }}
+          jira-password: ${{ secrets.JIRA_PASSWORD }}
           debug: true
 
       - name: Cache Gradle packages

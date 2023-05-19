@@ -2,6 +2,22 @@
 3p-gradle:
   ci:
     artifact-base-name: partior-web3j-quorum
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 0.0.1
+      version-sources:
+        jira:
+          enabled: true
+          ## Comma delimited, example: DEVPILOT,DSO
+          project-keys: DSO
+          version-identifier: "3P_W3Q"
+      prepend-version:
+        enabled: true
+        rules:
+          file:
+            enabled: true
+            target: ./app-version.cfg
+            key: TESSERA-VERSION
     branches:
       default:
         java-version: 11

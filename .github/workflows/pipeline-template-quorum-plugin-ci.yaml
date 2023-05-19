@@ -263,6 +263,8 @@ jobs:
           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
           branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           consolidated-commit-msg: ${{ env.ALL_DELTA_COMMIT_MSG }}
+          jira-username: ${{ secrets.JIRA_USERNAME }}
+          jira-password: ${{ secrets.JIRA_PASSWORD }}
           debug: true
 
   ci-build:
@@ -323,13 +325,27 @@ jobs:
       - name: Upload to artifactory
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
-          find build/dist -type f
-          # cd ${{ steps.pipeline-branch-config.outputs.build_basedir }}
-          # jfrog rt u ${{ env.FULL_ARTIFACT_FILENAME }}${{ env.FILE_EXT }}.tar.gz ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/
-          # jfrog rt bp
-          # jfrog rt sp \
-          #   "${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/${{ env.FULL_ARTIFACT_FILENAME }}${{ env.FILE_EXT }}.tar.gz" \
-          #   "git.commit_hash=${COMMIT_HASH};github.pr_number=${PR_NUMBER};github.pr_target_branch=${PR_TARGET_BRANCH};git.source_branch=${SOURCE_BRANCH};promotion.qualified=false"
+          targetArtifactFile=$(find build/dist -type f -name *.zip)
+          targetArtifactChksumFile=$(find build/dist -type f -name *.checksum)
+          if [[ ! -f "$targetArtifactFile" ]]; then
+            echo "[ERROR] Zip artifact not found: $targetArtifactFile"
+            exit 1
+          fi
+          if [[ ! -f "$targetArtifactChksumFile" ]]; then
+            echo "[ERROR] Checksum artifact not found: $targetArtifactChksumFile"
+            exit 1
+          fi
+          zipFilename=$(basename "$targetArtifactFile")
+          checksumFilename=$(basename "$targetArtifactChksumFile")
+          baseDir=$(dirname "$targetArtifactFile")
+
+          cd $baseDir
+          jfrog rt u $zipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/
+          jfrog rt u $checksumFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/
+          jfrog rt bp
+          jfrog rt sp \
+            "${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$zipFilename" \
+            "git.commit_hash=${COMMIT_HASH};github.pr_number=${PR_NUMBER};github.pr_target_branch=${PR_TARGET_BRANCH};git.source_branch=${SOURCE_BRANCH};promotion.qualified=false"
 
 
       - name: Upload artifacts
