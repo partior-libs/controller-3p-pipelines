@@ -463,17 +463,17 @@ jobs:
       - name: Checkout code from SCM
         uses: actions/checkout@v3
 
-      - name: Extract version metadata
-        id: meta
-        run: |
-          echo "os_arch=$(go env GOOS)-$(go env GOARCH)" >> $GITHUB_OUTPUT
-          echo "version=v0.0.1-SNAPSHOT" >> $GITHUB_OUTPUT
-          echo "version_short=0.0.1-SNAPSHOT" >> $GITHUB_OUTPUT
+      # - name: Extract version metadata
+      #   id: meta
+      #   run: |
+      #     echo "os_arch=$(go env GOOS)-$(go env GOARCH)" >> $GITHUB_OUTPUT
+      #     echo "version=v0.0.1-SNAPSHOT" >> $GITHUB_OUTPUT
+      #     echo "version_short=0.0.1-SNAPSHOT" >> $GITHUB_OUTPUT
 
-      - name: Create portable linux dist
-        run: |
-          export PATH=$PATH:$(go env GOPATH)/bin
-          make VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
+      # - name: Create portable linux dist
+      #   run: |
+      #     export PATH=$PATH:$(go env GOPATH)/bin
+      #     make VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
 
 
       - name: Run Codacy Analysis CLI
