@@ -232,7 +232,7 @@ jobs:
 
       - name: Get last tag from original source
         id: get-tag
-        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+        #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
         run: |
@@ -248,7 +248,7 @@ jobs:
           echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
 
       - name: Start versioning bot
-        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+        #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
         id: version-bot
         uses: partior-libs/gcs-versioning-bot@partior-stable
         with:
@@ -897,34 +897,34 @@ jobs:
   #         # context must be explicitly provided to prevent docker/build-push-action checking out the repo again and deleting the downloaded artifacts
   #         context: .
 
-  # prepare-release:
-  #     runs-on: ubuntu-latest
-  #     needs: [ read-repo, read-config, ci-build ]
-  #     if: needs.read-config.outputs.PREPARE-RELEASE == 'true'
-  #     env:
-  #       ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
-  #       ARTIFACT_VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
-  #       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
-  #       COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
-  #       REPO_NAME: ${{ needs.read-repo.outputs.REPO-NAME }}
+  prepare-release:
+      runs-on: ubuntu-latest
+      needs: [ read-repo, read-config, ci-build ]
+      if: needs.read-config.outputs.PREPARE-RELEASE == 'true'
+      env:
+        ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
+        ARTIFACT_VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
+        BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
+        COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
+        REPO_NAME: ${{ needs.read-repo.outputs.REPO-NAME }}
         
-  #     steps:
-  #     - name: Tag release version on code baseline
-  #       uses: partior-libs/gcs-pipe-utils/actions/generic-git-tag@partior-stable
-  #       with: 
-  #         target-repo: "${{ github.repository }}"
-  #         artifact-version: "${{ env.ARTIFACT_VERSION }}"
-  #         target-repo-ref: "${{ env.COMMIT_HASH }}"
-  #         pat-token: ${{ secrets.GH_REPO_READER_TOKEN }}
+      steps:
+      - name: Tag release version on code baseline
+        uses: partior-libs/gcs-pipe-utils/actions/generic-git-tag@partior-stable
+        with: 
+          target-repo: "${{ github.repository }}"
+          artifact-version: "${{ env.ARTIFACT_VERSION }}"
+          target-repo-ref: "${{ env.COMMIT_HASH }}"
+          pat-token: ${{ secrets.GH_REPO_READER_TOKEN }}
 
-  #     - name: Create release
-  #       uses: partior-libs/gjs-create-release@partior-stable
-  #       with:
-  #         name: "v${{ env.ARTIFACT_VERSION }}"
-  #         body: "Auto generated: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-  #         target_commitish: "${{ env.COMMIT_HASH }}"
-  #         generate_release_notes: true
-  #         tag_name: "v${{ env.ARTIFACT_VERSION }}"
-  #         repository: "${{ github.repository }}"
-  #         token: ${{ secrets.GH_REPO_READER_TOKEN }}
-  #         append_body: true
+      - name: Create release
+        uses: partior-libs/gjs-create-release@partior-stable
+        with:
+          name: "v${{ env.ARTIFACT_VERSION }}"
+          body: "Auto generated: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_commitish: "${{ env.COMMIT_HASH }}"
+          generate_release_notes: true
+          tag_name: "v${{ env.ARTIFACT_VERSION }}"
+          repository: "${{ github.repository }}"
+          token: ${{ secrets.GH_REPO_READER_TOKEN }}
+          append_body: true
