@@ -18,6 +18,8 @@ env:
   ARTIFACT_VERSION_FILE: version_file_${{ github.run_id }}_${{ github.run_number }}
   GPG_SECRET_KEYS: ${{ secrets.GPG_SECRET_KEYS }}
   GPG_OWNERTRUST: ${{ secrets.GPG_OWNERTRUST }}
+  TESSERA_DOCKER_IMAGE: tessera
+  QUORUM_DOCKER_IMAGE: quorumengineering/quorum
 
 jobs:
   read-repo:
@@ -280,11 +282,7 @@ jobs:
           find tessera-jaxrs -type f  -name build.gradle | xargs -i grep -lE "^resolve {" {} | xargs -i sed -i "s/^resolve {/tasks.resolve {/g" {}
           sed -i "s/net.consensys.quorum.tessera/$groupName/g" build.gradle
 
-
-      # - name: Build
-      #   if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
-      #   run: jf gradle check jacocoTestReport
-
+      # Run the build 
       - name: Build
         run: |
           ## Fix build issue with jfrog apiVersion: v1
@@ -562,6 +560,9 @@ jobs:
       - name: Execute gradle
         run: |
           echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
+          ## Disable CLI test because this is Partior's build version
+          sed -i "s/CucumberVersionCliIT.class//g" tests/acceptance-test/src/test/java/com/quorum/tessera/test/CucumberTestSuite.java
+
           ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --tests CucumberTestSuite --info
       - name: Upload junit reports
         uses: actions/upload-artifact@v3
