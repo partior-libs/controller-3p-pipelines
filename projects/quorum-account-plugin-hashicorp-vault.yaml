@@ -7,7 +7,7 @@
       initial-release-version: 0.0.1
       version-sources:
         jira:
-          enabled: true
+          enabled: false
           ## Comma delimited, example: DEVPILOT,DSO
           project-keys: DSO
           version-identifier: "3P_QAPHV"
