@@ -475,10 +475,6 @@ jobs:
           export PATH=$PATH:$(go env GOPATH)/bin
           make VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
 
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: ./...
 
       - name: Run Codacy Analysis CLI
         uses: codacy/codacy-analysis-cli-action@master
@@ -487,7 +483,7 @@ jobs:
           # You can also omit the token and run the tools that support default configurations
           api-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           verbose: true
-          tool: gosec
+          run-gosec: true
           skip-uncommitted-files-check: true
           upload: true
           skip-container-engine-check: true
