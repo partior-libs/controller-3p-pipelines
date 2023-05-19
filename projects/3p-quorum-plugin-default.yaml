@@ -1,5 +1,5 @@
 ---
-3p-gradle:
+3p-quorum-plugin:
   ci:
     artifact-base-name: default-artifact-name
     artifact-auto-versioning:
