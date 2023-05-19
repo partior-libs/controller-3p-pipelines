@@ -477,7 +477,9 @@ jobs:
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
-        
+        with:
+          args: ./...
+
       - name: Run Codacy Analysis CLI
         uses: codacy/codacy-analysis-cli-action@master
         with:
