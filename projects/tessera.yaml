@@ -47,6 +47,15 @@
             enabled: false
           jira-issue:
             enabled: false
+        origin-tag-checker:
+          upstream:
+            enabled: true
+            verify-sha:
+              enabled: false
+          ## if upstream is enabled, local-file will be disabled
+          local-file:
+            enabled: true
+            file: version.txt
       hotfix:
         artifact:
           packager:
