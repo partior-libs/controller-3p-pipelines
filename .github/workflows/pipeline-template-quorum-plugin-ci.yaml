@@ -454,9 +454,11 @@ jobs:
           name: ${{ matrix.os }}-testout
           path: main/internal/test/integration/testout/
 
-  spotbugs:
-    name: Spotbugs
+  gosec-scan:
+    name: Gosec2
     runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
     steps:
       - name: Checkout code from SCM
         uses: actions/checkout@v3
@@ -473,6 +475,9 @@ jobs:
           export PATH=$PATH:$(go env GOPATH)/bin
           make VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
 
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        
       - name: Run Codacy Analysis CLI
         uses: codacy/codacy-analysis-cli-action@master
         with:
