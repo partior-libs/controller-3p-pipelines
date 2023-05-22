@@ -364,19 +364,22 @@ jobs:
         run: |
           sourceRepo="${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}"
           targetRepo=$(echo $sourceRepo | sed "s/gradle/generic/g")
+          if [[ ! "$targetRepo" == *"-local" ]]; then
+            targetRepo=$targetRepo-local
+          fi
           groupNameID="${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}"
           groupNamePath=$(echo $groupNameID | sed "s/\./\//g")
           version=${{ steps.version-bot.outputs.artifact-version-name }}
           echo "[INFO] Copying from gradle to generic repo..."
-          echo "[INFO] jf cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.jar $targetRepo/tessera-dist/$version/tessera-dist-$version.jar"
-          echo "[INFO] jf cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.tar $targetRepo/tessera-dist/$version/tessera-dist-$version.tar"
-          echo "[INFO] jf cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar"
-          echo "[INFO] jf cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.tar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar"
+          echo "[INFO] jf rt cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.jar $targetRepo/tessera-dist/$version/tessera-dist-$version.jar"
+          echo "[INFO] jf rt cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.tar $targetRepo/tessera-dist/$version/tessera-dist-$version.tar"
+          echo "[INFO] jf rt cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar"
+          echo "[INFO] jf rt cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.tar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar"
 
-          jf cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.jar $targetRepo/tessera-dist/$version/tessera-dist-$version.jar
-          jf cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.tar $targetRepo/tessera-dist/$version/tessera-dist-$version.tar
-          jf cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar
-          jf cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.tar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar
+          jf rt cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.jar $targetRepo/tessera-dist/$version/tessera-dist-$version.jar
+          jf rt cp $sourceRepo/$groupNamePath/tessera-dist/$version/tessera-dist-$version.tar $targetRepo/tessera-dist/$version/tessera-dist-$version.tar
+          jf rt cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.jar
+          jf rt cp $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.tar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.tar
 
       - name: Upload tessera dist
         uses: actions/upload-artifact@v3
