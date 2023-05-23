@@ -67,12 +67,12 @@
         artifact:
           packager:
             enabled: true
-            artifactory-repo: 3p-gradle-release
+            artifactory-repo: 3p-gradle-dev
       release:
         artifact:
           packager:
             enabled: true
-            artifactory-repo: 3p-gradle-release
+            artifactory-repo: 3p-gradle-dev
       main:
         prepare-release:
           enabled: true
