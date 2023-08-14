@@ -1,0 +1,582 @@
+on:
+  workflow_call:
+    inputs:
+      CONTROLLER-REPO: 
+        required: true
+        type: string
+      CONTROLLER-REF:
+        required: false
+        type: string
+        default: main
+      PROJECT-REPO:
+        required: true
+        type: string
+
+env:
+  YAML_CONFIG_IMPORTER: yaml_importer_${{ github.run_id }}_${{ github.run_number }}
+  YAML_BRANCH_CONFIG_IMPORTER: yaml_branch_importer_${{ github.run_id }}_${{ github.run_number }}
+  ARTIFACT_VERSION_FILE: version_file_${{ github.run_id }}_${{ github.run_number }}
+  GPG_SECRET_KEYS: ${{ secrets.GPG_SECRET_KEYS }}
+  GPG_OWNERTRUST: ${{ secrets.GPG_OWNERTRUST }}
+  QUORUM_DOCKER_IMAGE: quorumengineering/quorum
+  GO_VERSION: 1.19
+  GOPATH: ${{ github.workspace }}/go
+  WORKING_DIR: ${{ github.workspace }}/go/src/github.com/ethereum/go-ethereum
+
+jobs:
+  read-repo:
+    runs-on: ubuntu-latest
+    outputs:
+      BRANCH-NAME: ${{ steps.get-repo.outputs.branch-name }}
+      REPO-NAME: ${{ steps.get-repo.outputs.name }}
+      DELTA-COMMIT-MSG: ${{ steps.get-repo.outputs.delta-commit-msg }}
+      COMMIT-HASH: ${{ steps.get-repo.outputs.commit-hash }}
+      PR-NUM: ${{ steps.get-repo.outputs.pr-num }}
+      PR-TARGET-BRANCH: ${{ steps.get-repo.outputs.pr-target-branch }}
+      SOURCE-BRANCH: ${{ steps.get-repo.outputs.source-branch }}
+      COMMIT-SHA: ${{ steps.get-repo.outputs.commit-sha }}
+      FLATTEN-BRANCH: ${{ steps.get-repo.outputs.flatten-branch }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get repo details
+        id: get-repo
+        run: |
+          branchName="$(echo ${GITHUB_REF_NAME} | cut -d'/' -f1)"
+          sourceBranch=${GITHUB_REF_NAME}
+          prTargetBranch='NIL'
+          isPR=false
+          commitMessages='NIL'
+          commitHash=${GITHUB_SHA}
+          prNum='NIL'
+          if [[ ! -z "$GITHUB_HEAD_REF" ]]; then
+            branchName=$(echo $GITHUB_HEAD_REF | cut -d"/" -f1)
+            sourceBranch=${GITHUB_HEAD_REF}
+            isPR=true
+            prTargetBranch=remotes/origin/${GITHUB_BASE_REF}
+            git fetch --all
+            echo git log $prTargetBranch..HEAD
+            commitMessages=$(git log $prTargetBranch..HEAD --pretty=format:"%s" | sed s/[\`\']//g | tr '\n' ' ' | xargs)
+            commitHash=$(git log | grep "Merge.*into" | head -1 | xargs | cut -d" " -f2)
+            prNum=$(echo $GITHUB_REF_NAME | cut -d"/" -f1)
+          fi
+          flattenBranch=${sourceBranch/\//_}
+          echo [DEBUG] commitHash=${commitHash}
+          echo "source-branch=${sourceBranch}" >> $GITHUB_OUTPUT
+          echo "pr-num=${prNum}" >> $GITHUB_OUTPUT
+          echo "pr-target-branch=${prTargetBranch}" >> $GITHUB_OUTPUT
+          echo "commit-hash=${commitHash}" >> $GITHUB_OUTPUT
+          echo "commit-sha=$(echo ${commitHash} | cut -c1-8 )" >> $GITHUB_OUTPUT
+          echo "branch-name=${branchName}" >> $GITHUB_OUTPUT
+          echo "name=$(echo ${GITHUB_REPOSITORY}  | cut -d"/" -f2)" >> $GITHUB_OUTPUT
+          echo "delta-commit-msg=${commitMessages}" >> $GITHUB_OUTPUT
+          echo "flatten-branch=${flattenBranch}" >> $GITHUB_OUTPUT
+
+  read-config:
+    runs-on: ubuntu-latest
+    outputs:
+      ENABLE-GITLEAKS: ${{ steps.pipeline-branch-config.outputs.gitleaks_enabled }}
+      ARTIFACT-BASE-NAME: ${{ steps.pipeline-config.outputs.artifact-base-name }}
+      ENABLE-BUILD: ${{ steps.check-compile-flag.outputs.ci-build_enabled }}
+      ENABLE-ARTIFACT-PACKAGER: ${{ steps.pipeline-branch-config.outputs.artifact_packager_enabled }}
+      PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.CONTROLLER-REPO }}
+          ref: ${{ inputs.CONTROLLER-REF }}
+          token: ${{ secrets.GH_REPO_READER_TOKEN  }}
+
+      - name: Get repo details
+        id: get-repo
+        run: |
+          branchName="$(echo ${GITHUB_REF_NAME} | cut -d"/" -f1)"
+          if [[ ! -z "$GITHUB_HEAD_REF" ]]; then
+            branchName=$(echo $GITHUB_HEAD_REF | cut -d"/" -f1)
+          fi 
+          echo "branch-name=${branchName}" >> $GITHUB_OUTPUT
+          echo "name=$(echo ${GITHUB_REPOSITORY}  | cut -d'/' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Generate CI config importer
+        uses: partior-libs/gcs-yaml-importer@partior-stable
+        with:
+          yaml-file: projects/${{ steps.get-repo.outputs.name }}.yaml
+          query-path: .3p-golang.ci
+          set-sub-default-keys: .3p-golang.ci-default
+          output-file: ${{ env.YAML_CONFIG_IMPORTER }}
+          yaml-file-for-default: projects/3p-golang-quorum-default.yaml
+          query-path-for-default: .3p-golang.ci
+          upload: true
+
+      - name: Start import pipeline config
+        id: pipeline-config
+        run: |
+          echo Importing ...${{ env.YAML_CONFIG_IMPORTER }}
+          source ./${{ env.YAML_CONFIG_IMPORTER }}
+
+      - name: Generate CI branch config importer
+        uses: partior-libs/gcs-yaml-importer@partior-stable
+        with:
+          yaml-file: projects/${{ steps.get-repo.outputs.name }}.yaml
+          query-path: .3p-golang.ci.branches.${{ steps.get-repo.outputs.branch-name }}
+          set-sub-default-keys: .3p-golang.ci.branches.default
+          output-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+          yaml-file-for-default: projects/3p-golang-quorum-default.yaml
+          query-path-for-default: .3p-golang.ci.branches.default
+          upload: true
+
+      - name: Start import pipeline branch config
+        id: pipeline-branch-config
+        run: |
+          echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+          source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    needs: [ read-config ]
+    if: needs.read-config.outputs.ENABLE-GITLEAKS == 'true'
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+
+      - name: Start import pipeline branch config
+        id: pipeline-config
+        run: |
+          echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+          source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: ${{ steps.pipeline-branch-config.outputs.gitleaks_scan-depth }}
+
+      - name: Fetch git details if PR
+        if: ${{ github.event.name }} == 'pull_request'
+        run: |
+          echo [INFO] Git Fetching.. [$GITHUB_BASE_REF]
+          git fetch origin $GITHUB_BASE_REF
+
+      - name: gitleaks-action
+        uses: partior-libs/gcs-gitleaks-scan@partior-stable
+
+  partior-versioning:
+    name: 'Try versioning'
+    needs: [ read-config, read-repo ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+
+      - name: Start import pipeline branch config
+        id: pipeline-branch-config
+        run: |
+          echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+          source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.YAML_CONFIG_IMPORTER }}
+
+
+      - name: Setup jfrog
+        uses: jfrog/setup-jfrog-cli@v3
+        env:
+          JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
+
+      - name: Get Temporary Access Token
+        run: |
+          accessUsername=$(jf config show | grep "User:" | awk -F'[\t ]+' '{print $2}' | head -n 1)
+          accessToken=$(jf rt access-token-create | jq -r .access_token)
+          echo "ARTIFACTORY_TMP_USERNAME=${accessUsername}" >> ${GITHUB_ENV}
+          echo "ARTIFACTORY_TMP_TOKEN=${accessToken}" >> ${GITHUB_ENV}
+          echo "::add-mask::${accessToken}"
+          echo "[INFO] accessUsername: $accessUsername"
+
+      - name: Get last tag from original source
+        id: get-tag
+        #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
+        run: |
+          #!/bin/bash
+          set +e
+
+          upstreamTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_enabled }}
+          upstreamTagApiUrl=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_api-url }}
+          upstreamTagShaChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_verify-sha_enabled }}
+          localFileTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_enabled }}
+          localFileTagCheckerFile=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_file }}
+
+          echo "[DEBUG] upstreamTagChecker=$upstreamTagChecker"
+          echo "[DEBUG] upstreamTagApiUrl=$upstreamTagApiUrl"
+          echo "[DEBUG] upstreamTagShaChecker=$upstreamTagShaChecker"
+          echo "[DEBUG] localFileTagChecker=$localFileTagChecker"
+          echo "[DEBUG] localFileTagCheckerFile=$localFileTagCheckerFile"
+
+          lastTag=partior-patch
+
+          if [[ "$localFileTagChecker" == "true" ]]; then
+            if [[ ! -f "$localFileTagCheckerFile" ]]; then
+              echo "[ERROR] Unable to locate tag checker file: $localFileTagCheckerFile"
+              exit 1
+            fi
+            lastTag=$(cat $localFileTagCheckerFile | xargs)
+            lastTag=${lastTag}_patch
+          fi
+
+          if [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "true" ]]; then
+            tagListFile=taglist.txt
+            gh api $upstreamTagApiUrl --jq '.[] | select(.name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | [.name,.commit.sha] | join(",")' > $tagListFile
+            
+            for eachTagInfo in $(cat $tagListFile); 
+            do
+              currentTagName=$(echo $eachTagInfo | cut -d"," -f1 | xargs)
+              currentTagSha=$(echo $eachTagInfo | cut -d"," -f2 | xargs)
+              echo "[INFO] Checking currentTagSha for tag $currentTagName"
+              if (git cat-file -e $currentTagSha); then 
+                echo "[INFO] Found SHA hash";
+                lastTag=$(echo $currentTagName | sed "s/tessera-//g")
+                lastTag=${lastTag}_patch
+                break
+              else 
+                echo "[INFO] SHA hash not found.";
+              fi
+            done
+          elif [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "false" ]]; then
+            lastTag=$(gh api $upstreamTagApiUrl --jq '.[] | select(.name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
+            lastTag=$(echo $lastTag | sed "s/v//g")
+            lastTag=${lastTag}_patch
+          fi
+
+          echo "[INFO] Last tag found: $lastTag"
+          echo "QUORUM-VERSION=$lastTag" > ./app-version.cfg
+          echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
+
+      - name: Start versioning bot
+        #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+        id: version-bot
+        uses: partior-libs/gcs-versioning-bot@partior-stable
+        with:
+          jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
+          versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
+          branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+          consolidated-commit-msg: ${{ env.DELTA-COMMIT-MSG }}
+          jira-username: ${{ secrets.JIRA_USERNAME }}
+          jira-password: ${{ secrets.JIRA_PASSWORD }}
+          debug: true
+
+  build:
+    name: 'Run tests and build on ${{ matrix.os }}'
+    needs: [ read-config, read-repo ]
+    strategy:
+      fail-fast: false
+      matrix:
+        # Not enable for macos as there's a consistent failure:
+        # --- FAIL: TestUPNP_DDWRT (2.20s)
+        # ###[error]    natupnp_test.go:165: not discovered
+        # must be sommething with Github Actions VM networking setup.
+        # Event Ubuntu requires a workaround
+        os: [ "ubuntu-20.04" ]
+    env:
+      QUORUM_IGNORE_TEST_PACKAGES: github.com/ethereum/go-ethereum/les,github.com/ethereum/go-ethereum/les/flowcontrol,github.com/ethereum/go-ethereum/mobile
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 'Setup Go ${{ env.GO_VERSION }}'
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: 'Check out project files'
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          path: ${{ env.WORKING_DIR }}
+      - name: 'Apply workaround to fix networking in Linux'
+        if: runner.os == 'Linux'
+        run: |
+          # https://github.com/actions/virtual-environments/issues/798
+          sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+      - name: 'Prepare environment'
+        run: |
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: 'Run tests and build all'
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          make test all
+  docker-build:
+    name: 'Build Docker image'
+    runs-on: ubuntu-20.04
+    steps:
+      - name: 'Check out project files'
+        uses: actions/checkout@v3
+      - name: 'Build docker image'
+        id: build
+        run: |
+          output_dir=${{ runner.temp }}/docker
+          mkdir -p $output_dir
+          docker build -t quorumengineering/quorum:pr .
+          docker save quorumengineering/quorum:pr > quorum-pr.tar
+          tar cfvz $output_dir/quorum-pr.tar.gz quorum-pr.tar
+          echo "::set-output name=output_dir::$output_dir"
+      - name: 'Upload workflow artifact - Docker image'
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image
+          path: ${{ steps.build.outputs.output_dir }}
+  acceptance-tests-basic:
+    name: Acceptance tests (${{ matrix.tag }})
+    needs:
+      - docker-build
+    if: success()
+    strategy:
+      fail-fast: false
+      matrix:
+        # list of tag expression being executed in parallel
+        # for PR, only selective tests are run.
+        # More comprehensive suites are scheduled to run in master
+        tag:
+          - 'basic || basic-raft || (advanced && raft) || networks/typical::raft'
+          - 'basic || basic-istanbul || (advanced && istanbul) || empty-block-period || networks/typical::istanbul'
+          - 'basic || basic-istanbul || (advanced && istanbul) || empty-block-period || block-reward || networks/typical::qbft'
+          - 'gcmode && block-sync && networks/template::raft-3plus1'
+          - 'gcmode && block-sync && networks/template::istanbul-3plus1'
+          - 'gcmode && block-sync && networks/template::qbft-3plus1'
+          - 'learner-peer-management || raftdnsenable && networks/template::raft-3plus1'
+          - 'validator-management && networks/template::qbft-3plus1'
+          - 'validator-management && networks/template::istanbul-3plus1'
+          - 'hybrid-validator-management-manage-besu && networks/typical-hybrid::hybrid-template-q2b1'
+          - 'hybrid-validator-management-manage-quorum && networks/typical-hybrid::hybrid-template-q1b2'
+          - 'qbft-transition-network && networks/template::qbft-4nodes-transition'
+          - 'basic || basic-raft || (advanced && raft) || networks/plugins::raft'
+          - 'basic || basic-istanbul || (advanced && istanbul) || networks/plugins::qbft'
+          - 'basic || basic-istanbul || (advanced && istanbul) || networks/plugins::istanbul'
+          - 'basic || basic-raft || (advanced && raft) || networks/plugins::raft-account-plugin-hashicorp-vault'
+          - 'basic || basic-istanbul || (advanced && istanbul) || networks/plugins::qbft-account-plugin-hashicorp-vault'
+          - 'basic || basic-istanbul || (advanced && istanbul) || networks/plugins::istanbul-account-plugin-hashicorp-vault'
+          - 'basic-rpc-security || networks/plugins::raft-rpc-security'
+          - 'basic-rpc-security || networks/plugins::qbft-rpc-security'
+          - 'basic-rpc-security || networks/plugins::istanbul-rpc-security'
+          - 'migration && networks/template::raft-4nodes'
+          - 'migration && networks/template::istanbul-4nodes'
+          - 'migration && networks/template::raft-4nodes-ancientdb'
+          - 'migration && networks/template::istanbul-4nodes-ancientdb'
+          - 'permissions-v1 && networks/template::raft-3plus1'
+          - 'permissions-v2 && networks/template::raft-3plus1'
+          - 'privacy-enhancements-upgrade || networks/template::raft-4nodes-pe'
+          - 'privacy-enhancements-upgrade || networks/template::istanbul-4nodes-pe'
+          - 'multitenancy && networks/plugins::raft-multitenancy'
+          - 'basic || basic-raft || (advanced && raft) || networks/typical::raft-simple-mps'
+          - 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::qbft-simple-mps'
+          - 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul-simple-mps'
+          - 'basic || networks/typical::raftmps'
+          - 'basic || networks/typical::qbftmps'
+          - 'basic || networks/typical::istanbulmps'
+          - 'mps-upgrade-txtrace || networks/template::raft-4nodes-mps'
+          - 'mps-upgrade-txtrace || networks/template::istanbul-4nodes-mps'
+          - 'mps-mixed-network-psr-check || networks/template::raft-4nodes-mps-mixed'
+          - 'mps-mixed-network-psr-check || networks/template::istanbul-4nodes-mps-mixed'
+          - '(basic && !nosupport && !mps && !(spam && !raw) && !eth-api-signed && !privacy-enhancements-disabled && !graphql && !async && !extension && !storage-root && !personal-api-signed) || networks/typical-hybrid::hybrid'
+    runs-on: ubuntu-20.04
+    steps:
+      - name: 'Download workflow artifact - Docker image'
+        uses: actions/acdownload-artifact@v3
+        with:
+          name: docker-image
+      - name: 'Load Docker image'
+        id: setup
+        run: |
+          tar xfvz docker-image/quorum-pr.tar.gz
+          docker load --input quorum-pr.tar
+          docker_env_file="${{ runner.temp }}/env.list"
+          echo "TF_VAR_quorum_docker_image={ name = \"quorumengineering/quorum:pr\", local = true }" >> $docker_env_file
+          echo "::set-output name=outputDir::${{ runner.temp }}"
+          echo "::set-output name=dockerEnvFile::$docker_env_file"
+      - name: 'Run acceptance tests'
+        run: |
+          cat ${{ steps.setup.outputs.dockerEnvFile }}
+          docker run --rm \
+            --network host \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ steps.setup.outputs.outputDir }}:${{ steps.setup.outputs.outputDir  }} \
+            --env-file ${{ steps.setup.outputs.dockerEnvFile }} \
+            quorumengineering/acctests:latest test \
+              -Pauto \
+              -Dauto.outputDir=${{ steps.setup.outputs.outputDir  }} \
+              -Dtags="${{ matrix.tag }}"
+      - name: 'Debug'
+        run: |
+          docker images
+          docker ps -a
+  acceptance-tests-extra:
+    name: Acceptance tests (${{ matrix.tag }})
+    needs:
+      - docker-build
+    if: success()
+    strategy:
+      fail-fast: false
+      matrix:
+        # list of tag expression being executed in parallel
+        include:
+          # privacy enhancements tests
+          - tag: '(basic && !privacy-enhancements-disabled) || privacy-enhancements || mandatory-recipients || basic-raft || (advanced && raft) || networks/typical::raft'
+            privacy-enhancements: true
+            privacy-precompile: false
+            privacy-marker-transactions: false
+          - tag: '(basic && !privacy-enhancements-disabled) || privacy-enhancements || mandatory-recipients || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
+            privacy-enhancements: true
+            privacy-precompile: false
+            privacy-marker-transactions: false
+          # privacy precompile/privacy marker transaction tests
+          - tag: 'basic || basic-raft || (advanced && raft) || networks/typical::raft'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: false
+          - tag: 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: false
+          - tag: 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::qbft'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: false
+          - tag: '(multitenancy || privacy-precompile-enabled) && networks/plugins::raft-multitenancy'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-precompile-disabled) || basic-raft || (advanced && raft) || networks/typical::raft-simple-mps'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-precompile-disabled) || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul-simple-mps'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-precompile-disabled) || basic-istanbul || (advanced && istanbul) || networks/typical::qbft-simple-mps'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-precompile-disabled) || networks/typical::raftmps'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-precompile-disabled) || networks/typical::istanbulmps'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-precompile-disabled) || networks/typical::qbftmps'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          # privacy enhancements + privacy precompile/privacy marker transaction tests
+          - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-raft || (advanced && raft) || networks/typical::raft'
+            privacy-enhancements: true
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
+            privacy-enhancements: true
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-istanbul || (advanced && istanbul) || networks/typical::qbft'
+            privacy-enhancements: true
+            privacy-precompile: true
+            privacy-marker-transactions: true
+          - tag: 'privacy-precompile-compatibility && networks/template::raft-4nodes'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: false # do not enable pmts as the test will do this on the necessary nodes
+          - tag: 'privacy-precompile-compatibility && networks/template::istanbul-4nodes'
+            privacy-enhancements: false
+            privacy-precompile: true
+            privacy-marker-transactions: false # do not enable pmts as the test will do this on the necessary nodes
+    runs-on: ubuntu-20.04
+    steps:
+      - name: 'Download workflow artifact - Docker image'
+        uses: actions/acdownload-artifact@v3
+        with:
+          name: docker-image
+      - name: 'Load Docker image'
+        id: setup
+        run: |
+          tar xfvz docker-image/quorum-pr.tar.gz
+          docker load --input quorum-pr.tar
+          docker_env_file="${{ runner.temp }}/env.list"
+          echo "TF_VAR_quorum_docker_image={ name = \"quorumengineering/quorum:pr\", local = true }" >> $docker_env_file
+          echo "TF_VAR_privacy_enhancements={block=0, enabled=${{ matrix.privacy-enhancements}}}" >> $docker_env_file
+          echo "TF_VAR_privacy_precompile={block=0, enabled=${{ matrix.privacy-precompile}}}" >> $docker_env_file
+          echo "TF_VAR_privacy_marker_transactions=${{ matrix.privacy-marker-transactions}}" >> $docker_env_file
+          echo "::set-output name=outputDir::${{ runner.temp }}"
+          echo "::set-output name=dockerEnvFile::$docker_env_file"
+      - name: 'Run extra acceptance tests'
+        run: |
+          cat ${{ steps.setup.outputs.dockerEnvFile }}
+          docker run --rm \
+            --network host \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ steps.setup.outputs.outputDir }}:${{ steps.setup.outputs.outputDir  }} \
+            --env-file ${{ steps.setup.outputs.dockerEnvFile }} \
+            quorumengineering/acctests:latest test \
+              -Pauto \
+              -Dauto.outputDir=${{ steps.setup.outputs.outputDir  }} \
+              -Dtags="${{ matrix.tag }}"
+      - name: 'Debug'
+        run: |
+          docker images
+          docker ps -a
+
+  peeps-tests:
+    name: Run PEEPS tests
+    needs:
+      - docker-build
+    runs-on: ubuntu-20.04
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v3
+      - name: 'Download workflow artifact - Docker image'
+        uses: actions/acdownload-artifact@v3
+        with:
+          name: docker-image
+      - name: 'Load Docker image'
+        id: setup
+        run: |
+          tar xfvz docker-image/quorum-pr.tar.gz
+          docker load --input quorum-pr.tar
+          docker image tag quorumengineering/quorum:pr quorumengineering/quorum:develop
+          docker image ls
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: 11
+          check-latest: true
+      - name: PEEPS
+        run: |
+          cd build
+          ./run-peeps.sh
+      - name: PEEPS Test Report
+        uses: mikepenz/action-junit-report@v2
+        if: always()
+        with:
+          report_paths: '**/build/test-results/*/TEST-*.xml'
+          check_name: PEEPS test report
+
+
+  # publish-docker:
+  #   name: Publish Docker Image
+  #   needs:
+  #     - build
+  #     - acceptance-tests-basic
+  #     - acceptance-tests-extra
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: 'Checkout'
+  #       uses: actions/checkout@v3
+  #     - name: 'Build and publish to Docker Hub'
+  #       uses: docker/build-push-action@v1
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+  #         repository: ${{ secrets.DOCKER_REPO }}
+  #         tags: develop
+  #         add_git_labels: true

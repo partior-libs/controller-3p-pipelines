@@ -1,0 +1,87 @@
+---
+3p-gradle:
+  ci:
+    artifact-base-name: quorum
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 0.0.1
+      version-sources:
+        jira:
+          enabled: false
+          ## Comma delimited, example: DEVPILOT,DSO
+          project-keys: DSO
+          version-identifier: "3P_QUORUM"
+      prepend-version:
+        enabled: true
+        rules:
+          file:
+            enabled: true
+            target: ./app-version.cfg
+            key: DOCKER-VERSION
+    branches:
+      default:
+        java-version: 17
+        prepare-release:
+          enabled: false
+        compile:
+          gradle:
+            enabled: true
+        gitleaks:
+          enabled: false
+          scan-depth: 2
+        codacy:
+          upload-coverage:
+            enabled: false
+            coverage-file: ./lcov_filtered.info
+          spotbugs:
+            enabled: true
+        unit-test:
+          enabled: false
+          coverage:
+            enabled: false
+        artifact:
+          packager:
+            enabled: false
+            jfrog-config-id: artifactoryPartior
+            group: com.partior.tessera
+            artifactory-username: NA
+            artifactory-repo: 3p-gradle-dev
+            artifactory-dev-repo: 3p-gradle-dev
+            artifactory-release-repo: 3p-gradle-release
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
+        origin-tag-checker:
+          upstream:
+            enabled: true
+            api-url: repos/consensys/quorum/tags
+            verify-sha:
+              enabled: false
+          ## if upstream is enabled, local-file will be disabled
+          local-file:
+            enabled: true
+            file: version.txt
+      hotfix:
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-gradle-dev
+      release:
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-gradle-dev
+      main:
+        prepare-release:
+          enabled: true
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-gradle-release
+        tag-version:
+          git:
+            enabled: true
+          jira-issue:
+            enabled: true
