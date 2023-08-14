@@ -58,10 +58,10 @@
             enabled: true
             api-url: repos/consensys/quorum/tags
             verify-sha:
-              enabled: false
+              enabled: true
           ## if upstream is enabled, local-file will be disabled
           local-file:
-            enabled: true
+            enabled: false
             file: version.txt
       hotfix:
         artifact:
