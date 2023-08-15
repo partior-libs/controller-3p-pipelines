@@ -424,7 +424,8 @@ jobs:
             exit 1
           fi
           echo "[INFO] targetArtifactFile=$targetArtifactFile"
-          echo "ori-artifact-name=$(basename $targetArtifactFile)" >> $GITHUB_OUTPUT
+          oriTarZipFilename=$(basename $targetArtifactFile)
+          echo "ori-artifact-name=$oriTarZipFilename" >> $GITHUB_OUTPUT
           tarZipFilename=$(basename "$targetArtifactFile" | sed "s/${{ env.ARTIFACT_BASE_NAME }}_v/${{ env.ARTIFACT_BASE_NAME }}_/g")
           echo "[INFO] tarZipFilename=$tarZipFilename"
 
@@ -433,8 +434,8 @@ jobs:
           groupID=$(echo $groupID | sed "s/\./\//g" | xargs)
 
           cd $baseDir
-          echo [INFO] jfrog rt u $tarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
-          jfrog rt u $tarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
+          echo [INFO] jfrog rt u $oriTarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
+          jfrog rt u $oriTarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
           
           echo [INFO] jfrog rt bp --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
           jfrog rt bp "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}"
