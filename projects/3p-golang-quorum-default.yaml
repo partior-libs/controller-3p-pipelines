@@ -48,7 +48,7 @@
         enabled: false
         rules:
           branches: 
-            target: main
+            target: main,base
             enabled: true
           message-tag: 
             target: PATCH-VERSION 
