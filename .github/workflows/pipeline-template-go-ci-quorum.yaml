@@ -166,6 +166,10 @@ jobs:
     needs: [ read-config, read-repo ]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
@@ -319,7 +323,7 @@ jobs:
           docker build -t quorumengineering/quorum:pr .
           docker save quorumengineering/quorum:pr > quorum-pr.tar
           tar cfvz $output_dir/quorum-pr.tar.gz quorum-pr.tar
-          echo "::set-output name=output_dir::$output_dir"
+          echo "output_dir=$output_dir" >> $GITHUB_OUTPUT
       - name: 'Upload workflow artifact - Docker image'
         uses: actions/upload-artifact@v3
         with:
@@ -387,12 +391,13 @@ jobs:
       - name: 'Load Docker image'
         id: setup
         run: |
+          find . -type f
           tar xfvz docker-image/quorum-pr.tar.gz
           docker load --input quorum-pr.tar
           docker_env_file="${{ runner.temp }}/env.list"
           echo "TF_VAR_quorum_docker_image={ name = \"quorumengineering/quorum:pr\", local = true }" >> $docker_env_file
-          echo "::set-output name=outputDir::${{ runner.temp }}"
-          echo "::set-output name=dockerEnvFile::$docker_env_file"
+          echo "outputDir=${{ runner.temp }}" >> $GITHUB_OUTPUT
+          echo "dockerEnvFile=$docker_env_file" >> $GITHUB_OUTPUT
       - name: 'Run acceptance tests'
         run: |
           cat ${{ steps.setup.outputs.dockerEnvFile }}
@@ -506,8 +511,8 @@ jobs:
           echo "TF_VAR_privacy_enhancements={block=0, enabled=${{ matrix.privacy-enhancements}}}" >> $docker_env_file
           echo "TF_VAR_privacy_precompile={block=0, enabled=${{ matrix.privacy-precompile}}}" >> $docker_env_file
           echo "TF_VAR_privacy_marker_transactions=${{ matrix.privacy-marker-transactions}}" >> $docker_env_file
-          echo "::set-output name=outputDir::${{ runner.temp }}"
-          echo "::set-output name=dockerEnvFile::$docker_env_file"
+          echo "outputDir=${{ runner.temp }}" >> $GITHUB_OUTPUT
+          echo "dockerEnvFile=$docker_env_file" >> $GITHUB_OUTPUT
       - name: 'Run extra acceptance tests'
         run: |
           cat ${{ steps.setup.outputs.dockerEnvFile }}
