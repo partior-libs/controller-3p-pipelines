@@ -90,3 +90,16 @@
             enabled: true
           jira-issue:
             enabled: true
+
+      base:
+        prepare-release:
+          enabled: true
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-release-dev
+        tag-version:
+          git:
+            enabled: true
+          jira-issue:
+            enabled: true
