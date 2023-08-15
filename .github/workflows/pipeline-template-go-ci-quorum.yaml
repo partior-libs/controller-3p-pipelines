@@ -381,7 +381,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: 'Download workflow artifact - Docker image'
-        uses: actions/acdownload-artifact@v3
+        uses: actions/download-artifact@v3
         with:
           name: docker-image
       - name: 'Load Docker image'
@@ -493,7 +493,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: 'Download workflow artifact - Docker image'
-        uses: actions/acdownload-artifact@v3
+        uses: actions/download-artifact@v3
         with:
           name: docker-image
       - name: 'Load Docker image'
@@ -534,7 +534,7 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v3
       - name: 'Download workflow artifact - Docker image'
-        uses: actions/acdownload-artifact@v3
+        uses: actions/download-artifact@v3
         with:
           name: docker-image
       - name: 'Load Docker image'
