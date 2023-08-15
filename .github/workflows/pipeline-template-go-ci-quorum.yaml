@@ -356,7 +356,7 @@ jobs:
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           echo "key=$(go env GOOS)_$(go env GOARCH)" >> $GITHUB_OUTPUT
-          echo "version=${{ env.ARTIFACT_VERSION }}" >> $GITHUB_OUTPUT
+          echo "version=v${{ env.ARTIFACT_VERSION }}" >> $GITHUB_OUTPUT
           
       - name: 'Check out project files'
         uses: actions/checkout@v3
