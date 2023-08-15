@@ -425,7 +425,7 @@ jobs:
           fi
           echo "[INFO] targetArtifactFile=$targetArtifactFile"
           echo "ori-artifact-name=$(basename $targetArtifactFile)" >> $GITHUB_OUTPUT
-          tarZipFilename=$(basename "$targetArtifactFile" | sed "s/${{ env.ARTIFACT_BASE_NAME }}_v/${{ env.ARTIFACT_BASE_NAME }}_")
+          tarZipFilename=$(basename "$targetArtifactFile" | sed "s/${{ env.ARTIFACT_BASE_NAME }}_v/${{ env.ARTIFACT_BASE_NAME }}_/g")
           echo "[INFO] tarZipFilename=$tarZipFilename"
 
           baseDir=$(dirname "$targetArtifactFile")
