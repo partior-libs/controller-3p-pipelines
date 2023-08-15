@@ -430,6 +430,7 @@ jobs:
           echo [INFO] jfrog rt u $tarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
           jfrog rt u $tarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
           
+          echo [INFO] jfrog rt bp --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
           jfrog rt bp --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
           jfrog rt sp \
             "${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename" \
@@ -439,7 +440,7 @@ jobs:
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
           sourceRepo="${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}"
-          targetRepo=$(echo $sourceRepo | sed "s/gradle/generic/g")
+          targetRepo=$sourceRepo
           if [[ ! "$targetRepo" == *"-local" ]]; then
             targetRepo=$targetRepo-local
           fi
