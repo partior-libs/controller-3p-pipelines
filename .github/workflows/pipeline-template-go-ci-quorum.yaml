@@ -201,6 +201,13 @@ jobs:
 
   pre-build-bin:
     needs: [read-config,read-repo]
+    env:
+      ALL_DELTA_COMMIT_MSG: ${{ needs.read-repo.outputs.DELTA-COMMIT-MSG }}
+      ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
+      COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
+      PR_NUMBER: ${{ needs.read-repo.outputs.PR-NUM }}
+      PR_TARGET_BRANCH: ${{ needs.read-repo.outputs.PR-TARGET-BRANCH }}
+      SOURCE_BRANCH: ${{ needs.read-repo.outputs.SOURCE-BRANCH }}  
     outputs:
       ARTIFACT-VERSION: ${{ steps.version-bot.outputs.artifact-version-name}}
     runs-on: ubuntu-latest
@@ -315,7 +322,13 @@ jobs:
     name: 'Build binary for ${{ matrix.os }}'
     needs: [read-config, read-repo, pre-build-bin]
     env:
+      BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
+      ALL_DELTA_COMMIT_MSG: ${{ needs.read-repo.outputs.DELTA-COMMIT-MSG }}
       ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
+      COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
+      PR_NUMBER: ${{ needs.read-repo.outputs.PR-NUM }}
+      PR_TARGET_BRANCH: ${{ needs.read-repo.outputs.PR-TARGET-BRANCH }}
+      SOURCE_BRANCH: ${{ needs.read-repo.outputs.SOURCE-BRANCH }}
       ARTIFACT_VERSION: ${{ needs.pre-build-bin.outputs.ARTIFACT-VERSION }}
     strategy:
       fail-fast: false
@@ -343,7 +356,7 @@ jobs:
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           echo "key=$(go env GOOS)_$(go env GOARCH)" >> $GITHUB_OUTPUT
-          echo "version=${{ steps.version-bot.outputs.artifact-version-name}}" >> $GITHUB_OUTPUT
+          echo "version=${{ env.ARTIFACT_VERSION }}" >> $GITHUB_OUTPUT
           
       - name: 'Check out project files'
         uses: actions/checkout@v3
