@@ -416,14 +416,18 @@ jobs:
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          ARTIFACT_VERSION=$( echo ${{ env.ARTIFACT_VERSION }} | sed "s/^v//g")
+          ARTIFACT_VERSION=$(echo ${{ env.ARTIFACT_VERSION }} | sed -e 's/^v//g')
+          echo "[INFO] ARTIFACT_VERSION=$ARTIFACT_VERSION"
           targetArtifactFile=$(find build/artifact -type f -name *.tar.gz)
           if [[ ! -f "$targetArtifactFile" ]]; then
             echo "[ERROR] Tar zip artifact not found: $targetArtifactFile"
             exit 1
           fi
+          echo "[INFO] targetArtifactFile=$targetArtifactFile"
           echo "ori-artifact-name=$(basename $targetArtifactFile)" >> $GITHUB_OUTPUT
           tarZipFilename=$(basename "$targetArtifactFile" | sed "s/${{ env.ARTIFACT_BASE_NAME }}_v/${{ env.ARTIFACT_BASE_NAME }}_")
+          echo "[INFO] tarZipFilename=$tarZipFilename"
+
           baseDir=$(dirname "$targetArtifactFile")
           groupID=${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}
           groupID=$(echo $groupID | sed "s/\./\//g" | xargs)
