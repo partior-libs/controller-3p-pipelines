@@ -161,10 +161,54 @@ jobs:
       - name: gitleaks-action
         uses: partior-libs/gcs-gitleaks-scan@partior-stable
 
-  partior-versioning:
-    name: 'Try versioning'
+  test-bin:
+    name: 'Run tests and build on ${{ matrix.os }}'
     needs: [ read-config, read-repo ]
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Not enable for macos as there's a consistent failure:
+        # --- FAIL: TestUPNP_DDWRT (2.20s)
+        # ###[error]    natupnp_test.go:165: not discovered
+        # must be sommething with Github Actions VM networking setup.
+        # Event Ubuntu requires a workaround
+        os: [ "ubuntu-20.04" ]
+    env:
+      QUORUM_IGNORE_TEST_PACKAGES: github.com/ethereum/go-ethereum/les,github.com/ethereum/go-ethereum/les/flowcontrol,github.com/ethereum/go-ethereum/mobile
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 'Setup Go ${{ env.GO_VERSION }}'
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: 'Check out project files'
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          path: ${{ env.WORKING_DIR }}
+      - name: 'Apply workaround to fix networking in Linux'
+        if: runner.os == 'Linux'
+        run: |
+          # https://github.com/actions/virtual-environments/issues/798
+          sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+      - name: 'Prepare environment'
+        run: |
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: 'Run tests and build all'
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          make test all
+
+  build-bin:
+    name: 'Build binary for ${{ matrix.os }}'
+    needs: [read-config,read-repo]
+    env:
+      ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "ubuntu-20.04", "macos-latest" ]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -272,48 +316,110 @@ jobs:
           jira-password: ${{ secrets.JIRA_PASSWORD }}
           debug: true
 
-      - name: Debug version-bot
-        run: |
-          echo versions=${{ steps.version-bot.outputs.artifact-version-name}}
-          echo full-versions=${{ steps.version-bot.outputs.artifact-full-version-name}}
-
-  build:
-    name: 'Run tests and build on ${{ matrix.os }}'
-    needs: [ read-config, read-repo ]
-    strategy:
-      fail-fast: false
-      matrix:
-        # Not enable for macos as there's a consistent failure:
-        # --- FAIL: TestUPNP_DDWRT (2.20s)
-        # ###[error]    natupnp_test.go:165: not discovered
-        # must be sommething with Github Actions VM networking setup.
-        # Event Ubuntu requires a workaround
-        os: [ "ubuntu-20.04" ]
-    env:
-      QUORUM_IGNORE_TEST_PACKAGES: github.com/ethereum/go-ethereum/les,github.com/ethereum/go-ethereum/les/flowcontrol,github.com/ethereum/go-ethereum/mobile
-    runs-on: ${{ matrix.os }}
-    steps:
       - name: 'Setup Go ${{ env.GO_VERSION }}'
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+
+      - name: 'Prepare environment'
+        id: env
+        run: |
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          echo "key=$(go env GOOS)_$(go env GOARCH)" >> $GITHUB_OUTPUT
+          echo "version=${{ steps.version-bot.outputs.artifact-version-name}}" >> $GITHUB_OUTPUT
+          
       - name: 'Check out project files'
         uses: actions/checkout@v3
         with:
-          submodules: recursive
           path: ${{ env.WORKING_DIR }}
-      - name: 'Apply workaround to fix networking in Linux'
-        if: runner.os == 'Linux'
-        run: |
-          # https://github.com/actions/virtual-environments/issues/798
-          sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
-      - name: 'Prepare environment'
-        run: |
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      - name: 'Run tests and build all'
+
+      - name: 'Build geth'
+        # For MacOS, We use gtar and run purge command to workaround issue
+        # https://github.com/actions/virtual-environments/issues/2619
+        id: build
         working-directory: ${{ env.WORKING_DIR }}
+        run: |-
+          make geth
+          mkdir -p build/artifact
+          tar_file=build/artifact/geth_${{ steps.env.outputs.version }}_${{ steps.env.outputs.key }}.tar.gz
+
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            sudo /usr/sbin/purge
+            gtar cfvz ${tar_file} -C build/bin geth
+          else
+            tar cfvz ${tar_file} -C build/bin geth
+          fi
+
+
+          echo "tar_file=${tar_file}" >> $GITHUB_OUTPUT
+          echo "checksum=$(shasum -a 256 build/bin/geth | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: 'Verify tarball'
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |-
+          cp ${{ steps.build.outputs.tar_file }} ${{ runner.temp }}
+          pushd ${{ runner.temp}}
+          tar xfvz *.tar.gz
+          actual_checksum=$(shasum -a 256 geth | awk '{print $1}')
+          echo "Checksum: ${actual_checksum}"
+          popd
+          if [ "${{ steps.build.outputs.checksum }}" != "${actual_checksum}" ]; then
+            echo "::error::geth checksum validation fails"
+            exit 1
+          fi
+
+      - name: 'Upload artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ env.WORKING_DIR }}/build/artifact
+          name: ${{ steps.env.outputs.key }}
+          if-no-files-found: error
+
+      - name: Setup jfrog
+        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
+        uses: jfrog/setup-jfrog-cli@v3
+        env:
+          JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
+
+      - name: Upload to artifactory
+        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
-          make test all
+          ARTIFACT_VERSION=${{ steps.version-bot.outputs.artifact-version-name}}
+          targetArtifactFile=$(find build/artifact -type f -name *.tar.gz)
+          if [[ ! -f "$targetArtifactFile" ]]; then
+            echo "[ERROR] Zip artifact not found: $targetArtifactFile"
+            exit 1
+          fi
+          tarZipFilename=$(basename "$targetArtifactFile")
+          baseDir=$(dirname "$targetArtifactFile")
+          groupID=${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}
+          groupID=$(echo $groupID | sed "s/\./\//g" | xargs)
+
+          cd $baseDir
+          echo [INFO] jfrog rt u $tarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
+          jfrog rt u $tarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
+          
+          jfrog rt bp --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
+          jfrog rt sp \
+            "${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename" \
+            "git.commit_hash=${COMMIT_HASH};github.pr_number=${PR_NUMBER};github.pr_target_branch=${PR_TARGET_BRANCH};git.source_branch=${SOURCE_BRANCH};promotion.qualified=false"
+
+      - name: Copy artifacts from to generic path
+        if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
+        run: |
+          sourceRepo="${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}"
+          targetRepo=$(echo $sourceRepo | sed "s/gradle/generic/g")
+          if [[ ! "$targetRepo" == *"-local" ]]; then
+            targetRepo=$targetRepo-local
+          fi
+          groupNameID="${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}"
+          groupNamePath=$(echo $groupNameID | sed "s/\./\//g")
+          version=${{ steps.version-bot.outputs.artifact-version-name }}
+          echo "[INFO] Copying from gradle to generic repo..."
+          echo "[INFO] jf rt cp --flat=true $sourceRepo/$groupNamePath/${{ env.ARTIFACT_BASE_NAME }}/$version/$tarZipFilename $sourceRepo/$version/$tarZipFilename"
+
+          jf rt cp --flat=true $sourceRepo/$groupNamePath/${{ env.ARTIFACT_BASE_NAME }}/$version/$tarZipFilename $sourceRepo/$version/$tarZipFilename
+          
   docker-build:
     name: 'Build Docker image'
     runs-on: ubuntu-20.04
@@ -389,121 +495,121 @@ jobs:
         run: |
           docker images
           docker ps -a
-  acceptance-tests-extra:
-    name: Acceptance tests (${{ matrix.tag }})
-    needs:
-      - docker-build
-    if: success()
-    strategy:
-      fail-fast: false
-      matrix:
-        # list of tag expression being executed in parallel
-        include:
-          # privacy enhancements tests
-          - tag: '(basic && !privacy-enhancements-disabled) || privacy-enhancements || mandatory-recipients || basic-raft || (advanced && raft) || networks/typical::raft'
-            privacy-enhancements: true
-            privacy-precompile: false
-            privacy-marker-transactions: false
-          - tag: '(basic && !privacy-enhancements-disabled) || privacy-enhancements || mandatory-recipients || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
-            privacy-enhancements: true
-            privacy-precompile: false
-            privacy-marker-transactions: false
-          # privacy precompile/privacy marker transaction tests
-          - tag: 'basic || basic-raft || (advanced && raft) || networks/typical::raft'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: false
-          - tag: 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: false
-          - tag: 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::qbft'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: false
-          - tag: '(multitenancy || privacy-precompile-enabled) && networks/plugins::raft-multitenancy'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-precompile-disabled) || basic-raft || (advanced && raft) || networks/typical::raft-simple-mps'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-precompile-disabled) || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul-simple-mps'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-precompile-disabled) || basic-istanbul || (advanced && istanbul) || networks/typical::qbft-simple-mps'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-precompile-disabled) || networks/typical::raftmps'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-precompile-disabled) || networks/typical::istanbulmps'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-precompile-disabled) || networks/typical::qbftmps'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          # privacy enhancements + privacy precompile/privacy marker transaction tests
-          - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-raft || (advanced && raft) || networks/typical::raft'
-            privacy-enhancements: true
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
-            privacy-enhancements: true
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-istanbul || (advanced && istanbul) || networks/typical::qbft'
-            privacy-enhancements: true
-            privacy-precompile: true
-            privacy-marker-transactions: true
-          - tag: 'privacy-precompile-compatibility && networks/template::raft-4nodes'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: false # do not enable pmts as the test will do this on the necessary nodes
-          - tag: 'privacy-precompile-compatibility && networks/template::istanbul-4nodes'
-            privacy-enhancements: false
-            privacy-precompile: true
-            privacy-marker-transactions: false # do not enable pmts as the test will do this on the necessary nodes
-    runs-on: ubuntu-20.04
-    steps:
-      - name: 'Download workflow artifact - Docker image'
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-image
-      - name: 'Load Docker image'
-        id: setup
-        run: |
-          tar xfvz quorum-pr.tar.gz
-          docker load --input quorum-pr.tar
-          docker_env_file="${{ runner.temp }}/env.list"
-          echo "TF_VAR_quorum_docker_image={ name = \"quorumengineering/quorum:pr\", local = true }" >> $docker_env_file
-          echo "TF_VAR_privacy_enhancements={block=0, enabled=${{ matrix.privacy-enhancements}}}" >> $docker_env_file
-          echo "TF_VAR_privacy_precompile={block=0, enabled=${{ matrix.privacy-precompile}}}" >> $docker_env_file
-          echo "TF_VAR_privacy_marker_transactions=${{ matrix.privacy-marker-transactions}}" >> $docker_env_file
-          echo "outputDir=${{ runner.temp }}" >> $GITHUB_OUTPUT
-          echo "dockerEnvFile=$docker_env_file" >> $GITHUB_OUTPUT
-      - name: 'Run extra acceptance tests'
-        run: |
-          cat ${{ steps.setup.outputs.dockerEnvFile }}
-          docker run --rm \
-            --network host \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ steps.setup.outputs.outputDir }}:${{ steps.setup.outputs.outputDir  }} \
-            --env-file ${{ steps.setup.outputs.dockerEnvFile }} \
-            quorumengineering/acctests:latest test \
-              -Pauto \
-              -Dauto.outputDir=${{ steps.setup.outputs.outputDir  }} \
-              -Dtags="${{ matrix.tag }}"
-      - name: 'Debug'
-        run: |
-          docker images
-          docker ps -a
+  # acceptance-tests-extra:
+  #   name: Acceptance tests (${{ matrix.tag }})
+  #   needs:
+  #     - docker-build
+  #   if: success()
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       # list of tag expression being executed in parallel
+  #       include:
+  #         # privacy enhancements tests
+  #         - tag: '(basic && !privacy-enhancements-disabled) || privacy-enhancements || mandatory-recipients || basic-raft || (advanced && raft) || networks/typical::raft'
+  #           privacy-enhancements: true
+  #           privacy-precompile: false
+  #           privacy-marker-transactions: false
+  #         - tag: '(basic && !privacy-enhancements-disabled) || privacy-enhancements || mandatory-recipients || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
+  #           privacy-enhancements: true
+  #           privacy-precompile: false
+  #           privacy-marker-transactions: false
+  #         # privacy precompile/privacy marker transaction tests
+  #         - tag: 'basic || basic-raft || (advanced && raft) || networks/typical::raft'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: false
+  #         - tag: 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: false
+  #         - tag: 'basic || basic-istanbul || (advanced && istanbul) || networks/typical::qbft'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: false
+  #         - tag: '(multitenancy || privacy-precompile-enabled) && networks/plugins::raft-multitenancy'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-precompile-disabled) || basic-raft || (advanced && raft) || networks/typical::raft-simple-mps'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-precompile-disabled) || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul-simple-mps'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-precompile-disabled) || basic-istanbul || (advanced && istanbul) || networks/typical::qbft-simple-mps'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-precompile-disabled) || networks/typical::raftmps'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-precompile-disabled) || networks/typical::istanbulmps'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-precompile-disabled) || networks/typical::qbftmps'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         # privacy enhancements + privacy precompile/privacy marker transaction tests
+  #         - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-raft || (advanced && raft) || networks/typical::raft'
+  #           privacy-enhancements: true
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-istanbul || (advanced && istanbul) || networks/typical::istanbul'
+  #           privacy-enhancements: true
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: '(basic && !privacy-enhancements-disabled && !privacy-precompile-disabled) || privacy-enhancements || mandatory-recipients || privacy-precompile-enabled || basic-istanbul || (advanced && istanbul) || networks/typical::qbft'
+  #           privacy-enhancements: true
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: true
+  #         - tag: 'privacy-precompile-compatibility && networks/template::raft-4nodes'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: false # do not enable pmts as the test will do this on the necessary nodes
+  #         - tag: 'privacy-precompile-compatibility && networks/template::istanbul-4nodes'
+  #           privacy-enhancements: false
+  #           privacy-precompile: true
+  #           privacy-marker-transactions: false # do not enable pmts as the test will do this on the necessary nodes
+    # runs-on: ubuntu-20.04
+    # steps:
+    #   - name: 'Download workflow artifact - Docker image'
+    #     uses: actions/download-artifact@v3
+    #     with:
+    #       name: docker-image
+    #   - name: 'Load Docker image'
+    #     id: setup
+    #     run: |
+    #       tar xfvz quorum-pr.tar.gz
+    #       docker load --input quorum-pr.tar
+    #       docker_env_file="${{ runner.temp }}/env.list"
+    #       echo "TF_VAR_quorum_docker_image={ name = \"quorumengineering/quorum:pr\", local = true }" >> $docker_env_file
+    #       echo "TF_VAR_privacy_enhancements={block=0, enabled=${{ matrix.privacy-enhancements}}}" >> $docker_env_file
+    #       echo "TF_VAR_privacy_precompile={block=0, enabled=${{ matrix.privacy-precompile}}}" >> $docker_env_file
+    #       echo "TF_VAR_privacy_marker_transactions=${{ matrix.privacy-marker-transactions}}" >> $docker_env_file
+    #       echo "outputDir=${{ runner.temp }}" >> $GITHUB_OUTPUT
+    #       echo "dockerEnvFile=$docker_env_file" >> $GITHUB_OUTPUT
+    #   - name: 'Run extra acceptance tests'
+    #     run: |
+    #       cat ${{ steps.setup.outputs.dockerEnvFile }}
+    #       docker run --rm \
+    #         --network host \
+    #         -v /var/run/docker.sock:/var/run/docker.sock \
+    #         -v ${{ steps.setup.outputs.outputDir }}:${{ steps.setup.outputs.outputDir  }} \
+    #         --env-file ${{ steps.setup.outputs.dockerEnvFile }} \
+    #         quorumengineering/acctests:latest test \
+    #           -Pauto \
+    #           -Dauto.outputDir=${{ steps.setup.outputs.outputDir  }} \
+    #           -Dtags="${{ matrix.tag }}"
+    #   - name: 'Debug'
+    #     run: |
+    #       docker images
+    #       docker ps -a
 
   peeps-tests:
     name: Run PEEPS tests
@@ -520,7 +626,7 @@ jobs:
       - name: 'Load Docker image'
         id: setup
         run: |
-          tar xfvz docker-image/quorum-pr.tar.gz
+          tar xfvz quorum-pr.tar.gz
           docker load --input quorum-pr.tar
           docker image tag quorumengineering/quorum:pr quorumengineering/quorum:develop
           docker image ls

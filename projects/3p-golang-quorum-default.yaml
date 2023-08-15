@@ -121,11 +121,11 @@
           packager:
             enabled: false
             jfrog-config-id: artifactoryPartior
-            group: partior
+            group: partior.quorum
             artifactory-username: NA
-            artifactory-repo: 3p-gradle-dev
-            artifactory-dev-repo: 3p-gradle-dev
-            artifactory-release-repo: 3p-gradle-release
+            artifactory-repo: 3p-generic-dev
+            artifactory-dev-repo: 3p-generic-dev
+            artifactory-release-repo: 3p-generic-release
         tag-version:
           git:
             enabled: false
@@ -138,5 +138,5 @@
               enabled: false
           ## if upstream is enabled, local-file will be disabled
           local-file:
-            enabled: true
+            enabled: false
             file: version.txt
