@@ -272,6 +272,11 @@ jobs:
           jira-password: ${{ secrets.JIRA_PASSWORD }}
           debug: true
 
+      - name: Debug version-bot
+        run: |
+          echo versions=${{ steps.version-bot.outputs.artifact-version-name}}
+          echo full-versions=${{ steps.version-bot.outputs.artifact-full-version-name}}
+
   build:
     name: 'Run tests and build on ${{ matrix.os }}'
     needs: [ read-config, read-repo ]
