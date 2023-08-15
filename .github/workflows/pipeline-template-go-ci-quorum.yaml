@@ -288,7 +288,7 @@ jobs:
               echo "[INFO] Checking currentTagSha for tag $currentTagName"
               if (git cat-file -e $currentTagSha); then 
                 echo "[INFO] Found SHA hash";
-                lastTag=$(echo $currentTagName | sed "s/tessera-//g")
+                lastTag=$(echo $currentTagName | sed "s/^v//g")
                 lastTag=${lastTag}_patch
                 break
               else 
