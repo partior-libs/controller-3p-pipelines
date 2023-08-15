@@ -68,6 +68,11 @@
           packager:
             enabled: true
             artifactory-repo: 3p-generic-dev
+      develop:
+        artifact:
+          packager:
+            enabled: true
+            artifactory-repo: 3p-generic-dev
       release:
         artifact:
           packager:

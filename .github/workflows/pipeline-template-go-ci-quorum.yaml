@@ -199,11 +199,124 @@ jobs:
         run: |
           make test all
 
+  pre-build-bin:
+    needs: [read-config,read-repo]
+    outputs:
+      ARTIFACT-VERSION: ${{ steps.version-bot.outputs.artifact-version-name}}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+
+      - name: Start import pipeline branch config
+        id: pipeline-branch-config
+        run: |
+          echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+          source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.YAML_CONFIG_IMPORTER }}
+
+
+      - name: Setup jfrog
+        uses: jfrog/setup-jfrog-cli@v3
+        env:
+          JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
+
+      - name: Get Temporary Access Token
+        run: |
+          accessUsername=$(jf config show | grep "User:" | awk -F'[\t ]+' '{print $2}' | head -n 1)
+          accessToken=$(jf rt access-token-create | jq -r .access_token)
+          echo "ARTIFACTORY_TMP_USERNAME=${accessUsername}" >> ${GITHUB_ENV}
+          echo "ARTIFACTORY_TMP_TOKEN=${accessToken}" >> ${GITHUB_ENV}
+          echo "::add-mask::${accessToken}"
+          echo "[INFO] accessUsername: $accessUsername"
+
+      - name: Get last tag from original source
+        id: get-tag
+        #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
+        run: |
+          #!/bin/bash
+          set +e
+
+          upstreamTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_enabled }}
+          upstreamTagApiUrl=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_api-url }}
+          upstreamTagShaChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_upstream_verify-sha_enabled }}
+          localFileTagChecker=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_enabled }}
+          localFileTagCheckerFile=${{ steps.pipeline-branch-config.outputs.origin-tag-checker_local-file_file }}
+
+          echo "[DEBUG] upstreamTagChecker=$upstreamTagChecker"
+          echo "[DEBUG] upstreamTagApiUrl=$upstreamTagApiUrl"
+          echo "[DEBUG] upstreamTagShaChecker=$upstreamTagShaChecker"
+          echo "[DEBUG] localFileTagChecker=$localFileTagChecker"
+          echo "[DEBUG] localFileTagCheckerFile=$localFileTagCheckerFile"
+
+          lastTag=partior-patch
+
+          if [[ "$localFileTagChecker" == "true" ]]; then
+            if [[ ! -f "$localFileTagCheckerFile" ]]; then
+              echo "[ERROR] Unable to locate tag checker file: $localFileTagCheckerFile"
+              exit 1
+            fi
+            lastTag=$(cat $localFileTagCheckerFile | xargs)
+            lastTag=${lastTag}_patch
+          fi
+
+          if [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "true" ]]; then
+            tagListFile=taglist.txt
+            gh api $upstreamTagApiUrl --jq '.[] | select(.name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | [.name,.commit.sha] | join(",")' > $tagListFile
+            
+            for eachTagInfo in $(cat $tagListFile); 
+            do
+              currentTagName=$(echo $eachTagInfo | cut -d"," -f1 | xargs)
+              currentTagSha=$(echo $eachTagInfo | cut -d"," -f2 | xargs)
+              echo "[INFO] Checking currentTagSha for tag $currentTagName"
+              if (git cat-file -e $currentTagSha); then 
+                echo "[INFO] Found SHA hash";
+                lastTag=$(echo $currentTagName | sed "s/tessera-//g")
+                lastTag=${lastTag}_patch
+                break
+              else 
+                echo "[INFO] SHA hash not found.";
+              fi
+            done
+          elif [[ "$upstreamTagChecker" == "true" ]] && [[ "$upstreamTagShaChecker" == "false" ]]; then
+            lastTag=$(gh api $upstreamTagApiUrl --jq '.[] | select(.name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | head -n1 | xargs)
+            lastTag=$(echo $lastTag | sed "s/v//g")
+            lastTag=${lastTag}_patch
+          fi
+
+          echo "[INFO] Last tag found: $lastTag"
+          echo "QUORUM-VERSION=$lastTag" > ./app-version.cfg
+          echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
+
+      - name: Start versioning bot
+        #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
+        id: version-bot
+        uses: partior-libs/gcs-versioning-bot@partior-stable
+        with:
+          jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
+          versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
+          branch-packager-rules-importer-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
+          consolidated-commit-msg: ${{ env.DELTA-COMMIT-MSG }}
+          jira-username: ${{ secrets.JIRA_USERNAME }}
+          jira-password: ${{ secrets.JIRA_PASSWORD }}
+          debug: true
+
   build-bin:
     name: 'Build binary for ${{ matrix.os }}'
-    needs: [read-config,read-repo]
+    needs: [read-config, read-repo, pre-build-bin]
     env:
       ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
+      ARTIFACT_VERSION: ${{ needs.pre-build-bin.outputs.ARTIFACT-VERSION }}
     strategy:
       fail-fast: false
       matrix:
@@ -384,7 +497,7 @@ jobs:
       - name: Upload to artifactory
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
-          ARTIFACT_VERSION=${{ steps.version-bot.outputs.artifact-version-name}}
+          ARTIFACT_VERSION=${{ env.ARTIFACT_VERSION }}
           targetArtifactFile=$(find build/artifact -type f -name *.tar.gz)
           if [[ ! -f "$targetArtifactFile" ]]; then
             echo "[ERROR] Zip artifact not found: $targetArtifactFile"
@@ -414,7 +527,7 @@ jobs:
           fi
           groupNameID="${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}"
           groupNamePath=$(echo $groupNameID | sed "s/\./\//g")
-          version=${{ steps.version-bot.outputs.artifact-version-name }}
+          version=${{ env.ARTIFACT_VERSION }}
           echo "[INFO] Copying from gradle to generic repo..."
           echo "[INFO] jf rt cp --flat=true $sourceRepo/$groupNamePath/${{ env.ARTIFACT_BASE_NAME }}/$version/$tarZipFilename $sourceRepo/$version/$tarZipFilename"
 
