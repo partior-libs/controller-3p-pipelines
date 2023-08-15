@@ -458,7 +458,7 @@ jobs:
           fi
           groupNameID="${{ steps.pipeline-branch-config.outputs.artifact_packager_group }}"
           groupNamePath=$(echo $groupNameID | sed "s/\./\//g")
-          version=${{ env.ARTIFACT_VERSION }}
+          version=$(echo ${{ env.ARTIFACT_VERSION }} | sed -e 's/^v//g')
           echo "[INFO] Copying from partior group to generic root ..."
           echo "[INFO] jf rt cp --flat=true $sourceRepo/$groupNamePath/${{ env.ARTIFACT_BASE_NAME }}/$version/$trimmedTarZipFilename $targetRepo/v$version/$oriTarZipFilename"
 
