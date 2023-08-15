@@ -1,5 +1,5 @@
 ---
-3p-gradle:
+3p-golang:
   ci:
     artifact-base-name: quorum
     artifact-auto-versioning:
