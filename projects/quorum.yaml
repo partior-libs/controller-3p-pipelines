@@ -84,7 +84,7 @@
         artifact:
           packager:
             enabled: true
-            artifactory-repo: 3p-release-dev
+            artifactory-repo: 3p-generic-release
         tag-version:
           git:
             enabled: true
@@ -97,7 +97,7 @@
         artifact:
           packager:
             enabled: true
-            artifactory-repo: 3p-release-dev
+            artifactory-repo: 3p-generic-release
         tag-version:
           git:
             enabled: true
