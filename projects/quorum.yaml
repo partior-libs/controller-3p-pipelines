@@ -20,25 +20,6 @@
             key: QUORUM-VERSION
     branches:
       default:
-        java-version: 17
-        prepare-release:
-          enabled: false
-        compile:
-          gradle:
-            enabled: true
-        gitleaks:
-          enabled: false
-          scan-depth: 2
-        codacy:
-          upload-coverage:
-            enabled: false
-            coverage-file: ./lcov_filtered.info
-          spotbugs:
-            enabled: true
-        unit-test:
-          enabled: false
-          coverage:
-            enabled: false
         artifact:
           packager:
             enabled: false
