@@ -1,0 +1,16 @@
+name: Update Partior-Stable Version
+run-name: Move partior-stable to ${{ github.event.inputs.target }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: The tag or reference to use
+        required: true
+
+jobs:
+  update-partior-tag:
+    uses: partior-libs/controller-generic-pipelines/.github/workflows/pipeline-template-update-partior-stable.yaml@partior-stable
+    with:
+      TARGET-REFERENCE: ${{ github.event.inputs.target }}
+    secrets: inherit
