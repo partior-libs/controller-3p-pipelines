@@ -302,6 +302,10 @@ jobs:
           fi
 
           echo "[INFO] Last tag found: $lastTag"
+          if [[ "$lastTag" == "partior-patch" ]]; then
+            echo "[ERROR] Detected failure in retrieving remote tag. Please check the log and resolve the issue before proceeding..."
+            exit 1
+          fi
           echo "QUORUM-VERSION=$lastTag" > ./app-version.cfg
           echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
 
