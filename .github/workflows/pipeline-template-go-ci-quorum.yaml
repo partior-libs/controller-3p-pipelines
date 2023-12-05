@@ -19,7 +19,7 @@ env:
   GPG_SECRET_KEYS: ${{ secrets.GPG_SECRET_KEYS }}
   GPG_OWNERTRUST: ${{ secrets.GPG_OWNERTRUST }}
   QUORUM_DOCKER_IMAGE: quorumengineering/quorum
-  GO_VERSION: 1.19
+  GO_VERSION: 1.19.1
   GOPATH: ${{ github.workspace }}/go
   WORKING_DIR: ${{ github.workspace }}/go/src/github.com/ethereum/go-ethereum
 
