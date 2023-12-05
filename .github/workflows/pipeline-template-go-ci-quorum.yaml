@@ -444,8 +444,8 @@ jobs:
           echo [INFO] jfrog rt u $oriTarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
           jfrog rt u $oriTarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
           
-          echo [INFO] jfrog rt bp --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
-          jfrog rt bp "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}"
+          echo [INFO] jfrog rt bp --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
+          jfrog rt bp "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
           jfrog rt sp \
             "${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename" \
             "git.commit_hash=${COMMIT_HASH};github.pr_number=${PR_NUMBER};github.pr_target_branch=${PR_TARGET_BRANCH};git.source_branch=${SOURCE_BRANCH};promotion.qualified=false"
