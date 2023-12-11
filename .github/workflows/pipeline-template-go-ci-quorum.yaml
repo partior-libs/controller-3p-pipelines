@@ -491,7 +491,7 @@ jobs:
           name: docker-image
           path: ${{ steps.build.outputs.output_dir }}
   acceptance-tests-basic:
-    name: Acceptance tests (${{ matrix.tag }})
+    name: Acceptance tests (${{ matrix.tag }}) - ${{ inputs.ACCEPTANCE-TEST }}
     needs:
       - docker-build
     if: success()
@@ -584,7 +584,7 @@ jobs:
           docker images
           docker ps -a
   acceptance-tests-extra:
-    name: Acceptance tests (${{ matrix.tag }})
+    name: Acceptance tests (${{ matrix.tag }}) - ${{ inputs.ACCEPTANCE-TEST }}
     needs:
       - docker-build
     if: success() && inputs.ACCEPTANCE-TEST == 'With Extra Acceptance Tests (feature-enabled networks)'
