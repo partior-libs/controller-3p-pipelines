@@ -333,6 +333,9 @@ jobs:
       - name: Upload to artifactory
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
+          set +e
+          find build/dist -type f
+          echo "[DEBUG] end"
           targetArtifactFile=$(find build/dist -type f -name *.zip)
           targetArtifactChksumFile=$(find build/dist -type f -name *.checksum)
           if [[ ! -f "$targetArtifactFile" ]]; then
