@@ -7,7 +7,7 @@ on:
       CONTROLLER-REF:
         required: false
         type: string
-        default: main
+        default: partior-stable
       PROJECT-REPO:
         required: true
         type: string
@@ -334,12 +334,6 @@ jobs:
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
           set +e
-          find build/dist -type f 
-          echo "[DEBUG] Find zip"
-          find build/dist -type f -name *.zip
-          echo "[DEBUG] Find zip.checksum"
-          find build/dist -type f -name *.zip.checksum
-          echo "[DEBUG] End"
 
           targetArtifactFile=$(find build/dist -type f -name *.zip)
           targetArtifactChksumFile=$(find build/dist -type f -name *.zip.checksum)
