@@ -1,7 +1,7 @@
 ---
 3p-quorum-plugin:
   ci:
-    artifact-base-name: quorum-account-plugin-hashicorp-vault
+    artifact-base-name: quorum-signer-plugin-for-hashicorp-vault
     artifact-auto-versioning:
       enabled: true
       initial-release-version: 0.0.1
@@ -10,7 +10,7 @@
           enabled: false
           ## Comma delimited, example: DEVPILOT,DSO
           project-keys: DSO
-          version-identifier: "3P_QAPHV"
+          version-identifier: "3P_QSPHV"
       prepend-version:
         enabled: true
         rules:
@@ -55,7 +55,7 @@
         origin-tag-checker:
           upstream:
             enabled: true
-            api-url: repos/consensys/quorum-account-plugin-hashicorp-vault/tags
+            api-url: repos/consensys/quorum-signer-plugin-for-hashicorp-vault/tags
             verify-sha:
               enabled: true
           ## if upstream is enabled, local-file will be disabled
