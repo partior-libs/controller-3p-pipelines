@@ -336,8 +336,8 @@ jobs:
           set +e
           find build/dist -type f
           echo "[DEBUG] end"
-          targetArtifactFile=$(find build/dist -type f -name *.checksum.zip)
-          targetArtifactChksumFile=$(find build/dist -type f -name *.checksum)
+          targetArtifactFile=$(find build/dist -type f -name *.zip)
+          targetArtifactChksumFile=$(find build/dist -type f -name *.zip.checksum)
           if [[ ! -f "$targetArtifactFile" ]]; then
             echo "[ERROR] Zip artifact not found: $targetArtifactFile"
             exit 1
