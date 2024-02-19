@@ -334,10 +334,17 @@ jobs:
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
           set +e
-          find build/dist -type f
-          echo "[DEBUG] end"
+          find build/dist -type f 
+          echo "[DEBUG] Find zip"
+          find build/dist -type f -name *.zip
+          echo "[DEBUG] Find zip.checksum"
+          find build/dist -type f -name *.zip.checksum
+          echo "[DEBUG] End"
+
           targetArtifactFile=$(find build/dist -type f -name *.zip)
           targetArtifactChksumFile=$(find build/dist -type f -name *.zip.checksum)
+          echo "[DEBUG] targetArtifactFile=[$targetArtifactFile]"
+          echo "[DEBUG] targetArtifactChksumFile=[$targetArtifactChksumFile]"
           if [[ ! -f "$targetArtifactFile" ]]; then
             echo "[ERROR] Zip artifact not found: $targetArtifactFile"
             exit 1
