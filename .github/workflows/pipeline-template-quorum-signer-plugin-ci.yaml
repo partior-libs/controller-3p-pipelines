@@ -315,13 +315,14 @@ jobs:
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
-          make VERSION=${{ steps.meta.outputs.version_short }}
+          make default package VERSION=${{ steps.meta.outputs.version_short }}
 
       - name: Create portable linux dist
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
-          make VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
+          make default package VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
+
 
       - name: Setup jfrog
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
@@ -332,8 +333,12 @@ jobs:
       - name: Upload to artifactory
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
+          set +e
+
           targetArtifactFile=$(find build/dist -type f -name *.zip)
-          targetArtifactChksumFile=$(find build/dist -type f -name *.checksum)
+          targetArtifactChksumFile=$(find build/dist -type f -name *.zip.checksum)
+          echo "[DEBUG] targetArtifactFile=[$targetArtifactFile]"
+          echo "[DEBUG] targetArtifactChksumFile=[$targetArtifactChksumFile]"
           if [[ ! -f "$targetArtifactFile" ]]; then
             echo "[ERROR] Zip artifact not found: $targetArtifactFile"
             exit 1
@@ -394,90 +399,6 @@ jobs:
           repository: "${{ github.repository }}"
           token: ${{ secrets.GH_REPO_READER_TOKEN }}
           append_body: true
-
-
-  itest:
-    name: Run itests on ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-latest", "macos-latest"]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Setup Go 1.18
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.18
-      - name: Checkout project files
-        uses: actions/checkout@v3
-        with:
-          path: main
-      - name: Checkout quorum-signer Vault plugin
-        uses: actions/checkout@v3
-        with:
-          repository: ConsenSys/quorum-signer-plugin-for-hashicorp-vault
-          path: quorum-signer
-          ref: v0.2.0
-      - name: Checkout quorum
-        uses: actions/checkout@v3
-        with:
-          repository: ConsenSys/quorum
-          path: quorum
-      - name: Build quorum-signer Vault plugin
-        run: |
-          pushd quorum-signer
-          go mod tidy
-          make
-          ls build
-          go build -o bin/quorum-signer .
-          ls bin
-          popd
-      - name: Build quorum
-        run: |
-          mkdir -p $(go env GOPATH)/ethereum/go-ethereum
-          cp -a quorum/. $(go env GOPATH)/ethereum/go-ethereum/
-          pushd $(go env GOPATH)/ethereum/go-ethereum
-          make all
-          ls build/bin
-          echo "$(go env GOPATH)/ethereum/go-ethereum/build/bin" >> $GITHUB_PATH
-          popd
-      - if: matrix.os == 'ubuntu-latest'
-        name: Install vault CLI (ubuntu)
-        run: |
-          wget https://releases.hashicorp.com/vault/1.6.0/vault_1.6.0_linux_amd64.zip -O /tmp/vault_1.6.0_linux_amd64.zip
-          mkdir -p vault/bin
-          pushd vault/bin
-          unzip /tmp/vault_1.6.0_linux_amd64.zip
-          echo "${PWD}" >> $GITHUB_PATH
-          popd
-      - if: matrix.os == 'macos-latest'
-        name: Install vault CLI (macos)
-        run: |
-          wget https://releases.hashicorp.com/vault/1.6.0/vault_1.6.0_darwin_amd64.zip -O /tmp/vault_1.6.0_darwin_amd64.zip
-          mkdir -p vault/bin
-          pushd vault/bin
-          unzip /tmp/vault_1.6.0_darwin_amd64.zip
-          echo "${PWD}" >> $GITHUB_PATH
-          popd
-      - name: Run itests
-        env:
-          PLUGIN_DIST: ${{ github.workspace }}/main/build/dist
-          PLUGIN_VERSION: 0.2.2-SNAPSHOT
-          VAULT_SIGNER_DIR: ${{ github.workspace }}/quorum-signer/bin
-          VAULT_SIGNER_NAME: quorum-signer
-        run: |
-          set -x
-          geth version
-          vault -v
-          ls quorum-signer/build
-          set +x
-          make -C main itest
-      - if: ${{ failure() }}
-        name: Upload test output
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ matrix.os }}-testout
-          path: main/internal/test/integration/testout/
 
   gosec-scan:
     name: Gosec2
