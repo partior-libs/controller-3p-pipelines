@@ -202,7 +202,7 @@ jobs:
 
 
       - name: Setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@v3
         with:
           version: 2.50.4
         env:
