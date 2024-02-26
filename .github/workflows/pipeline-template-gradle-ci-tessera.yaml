@@ -234,6 +234,7 @@ jobs:
           echo "[DEBUG] Gradle Resolve Repo: $gradleRepoResolve"
           echo "[DEBUG] Gradle Deploy Repo: $gradleRepoDeploy"
           jf --version
+          java --version
           jf gradlec --server-id-resolve="$jfrogServerID" --server-id-deploy="$jfrogServerID" --repo-resolve="$gradleRepoResolve" --repo-deploy="$gradleRepoDeploy" --deploy-maven-desc=true --deploy-ivy-desc=true --use-wrapper=true
 
       - name: Get last tag from original source
