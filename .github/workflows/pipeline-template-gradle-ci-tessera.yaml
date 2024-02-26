@@ -202,7 +202,9 @@ jobs:
 
 
       - name: Setup jfrog
-        uses: jfrog/setup-jfrog-cli@v3
+        uses: jfrog/setup-jfrog-cli@v4
+        with:
+          version: 2.50.4
         env:
           JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
 
