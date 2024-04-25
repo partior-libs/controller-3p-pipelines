@@ -22,6 +22,9 @@ env:
   GO_VERSION: 1.19
   GOPATH: ${{ github.workspace }}/go
   WORKING_DIR: ${{ github.workspace }}/go/src/github.com/ethereum/go-ethereum
+  DOCKER_REGISTRY_BASE_URL: https://partior.jfrog.io/artifactory
+  DOCKER_ARTIFACTORY_REPO: debug-docker-local
+  DOCKER_REGISTRY: partior.jfrog.io
 
 jobs:
   read-repo:
@@ -527,6 +530,24 @@ jobs:
           echo "TF_VAR_quorum_docker_image={ name = \"quorumengineering/quorum:pr\", local = true }" >> $docker_env_file
           echo "outputDir=${{ runner.temp }}" >> $GITHUB_OUTPUT
           echo "dockerEnvFile=$docker_env_file" >> $GITHUB_OUTPUT
+      - name: Setup jfrog
+        uses: jfrog/setup-jfrog-cli@v3
+        env:
+          JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
+      - name: Get Temporary Access Token
+        run: |
+          accessUsername=$(jf config show | grep "User:" | awk -F'[\t ]+' '{print $2}' | head -n 1)
+          accessToken=$(jf rt access-token-create | jq -r .access_token)
+          echo "ARTIFACTORY_TMP_USERNAME=${accessUsername}" >> ${GITHUB_ENV}
+          echo "ARTIFACTORY_TMP_TOKEN=${accessToken}" >> ${GITHUB_ENV}
+          echo "::add-mask::${accessToken}"
+          echo "[INFO] accessUsername: $accessUsername"
+      - name: Docker login
+        uses: docker/login-action@v2
+        with: 
+          registry: ${{ env.DOCKER_REGISTRY_BASE_URL }}/${{ env.DOCKER_ARTIFACTORY_REPO }}
+          username: ${{ env.ARTIFACTORY_TMP_USERNAME }}
+          password: ${{ env.ARTIFACTORY_TMP_TOKEN }}
       - name: 'Run acceptance tests'
         run: |
           cat ${{ steps.setup.outputs.dockerEnvFile }}
@@ -535,7 +556,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ steps.setup.outputs.outputDir }}:${{ steps.setup.outputs.outputDir  }} \
             --env-file ${{ steps.setup.outputs.dockerEnvFile }} \
-            quorumengineering/acctests:latest test \
+            ${{ env.DOCKER_REGISTRY}}/${{ env.DOCKER_ARTIFACTORY_REPO }}/quorumengineering/partior/acctests:latest test \
               -Pauto \
               -Dauto.outputDir=${{ steps.setup.outputs.outputDir  }} \
               -Dtags="${{ matrix.tag }}"
@@ -650,7 +671,7 @@ jobs:
     #         -v /var/run/docker.sock:/var/run/docker.sock \
     #         -v ${{ steps.setup.outputs.outputDir }}:${{ steps.setup.outputs.outputDir  }} \
     #         --env-file ${{ steps.setup.outputs.dockerEnvFile }} \
-    #         quorumengineering/acctests:latest test \
+    #         debug-docker-local/quorumengineering/partior/acctests:latest test \
     #           -Pauto \
     #           -Dauto.outputDir=${{ steps.setup.outputs.outputDir  }} \
     #           -Dtags="${{ matrix.tag }}"
