@@ -12,12 +12,12 @@
           project-keys: DSO
           version-identifier: "3P_W3Q"
       prepend-version:
-        enabled: true
+        enabled: false
         rules:
           file:
             enabled: true
             target: ./app-version.cfg
-            key: TESSERA-VERSION
+            key: WEB3J-QUORUM-VERSION
     branches:
       default:
         java-version: 17
