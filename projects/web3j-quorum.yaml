@@ -20,7 +20,7 @@
             key: TESSERA-VERSION
     branches:
       default:
-        java-version: 11
+        java-version: 17
         prepare-release:
           enabled: false
         compile:
@@ -54,7 +54,6 @@
           jira-issue:
             enabled: false
       main:
-        java-version: 11
         prepare-release:
           enabled: true
         artifact:
