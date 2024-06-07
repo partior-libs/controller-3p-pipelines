@@ -354,12 +354,13 @@ jobs:
           groupID=$(echo $groupID | sed "s/\./\//g" | xargs)
 
           cd $baseDir
-          jfrog rt u --fail-no-op $zipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $zipFilename
+          jfrog rt u $zipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $zipFilename --fail-no-op
           if [[ $? -gt 0 ]]; then
             echo "[ERROR] Failed jfrog upload [$zipFilename]"
             exit 1
           fi
-          jfrog rt u --fail-no-op $checksumFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $checksumFilename
+
+          jfrog rt u $checksumFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/ --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $checksumFilename --fail-no-op
           if [[ $? -gt 0 ]]; then
             echo "[ERROR] Failed jfrog upload [$checksumFilename]"
             exit 1

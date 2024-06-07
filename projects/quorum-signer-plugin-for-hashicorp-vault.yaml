@@ -1,7 +1,7 @@
 ---
 3p-quorum-plugin:
   ci:
-    artifact-base-name: quorum-signer-plugin-for-hashicorp-vault
+    artifact-base-name: quorum-signer
     artifact-auto-versioning:
       enabled: true
       initial-release-version: 0.0.1
