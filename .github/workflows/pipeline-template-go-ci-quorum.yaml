@@ -445,8 +445,12 @@ jobs:
 
           cd $baseDir
           echo [INFO] jfrog rt u $oriTarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
-          jfrog rt u $oriTarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
-          
+          jfrog rt u --fail-no-op $oriTarZipFilename ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${groupID}/${{ env.ARTIFACT_BASE_NAME }}/${ARTIFACT_VERSION}/$tarZipFilename --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} --module $tarZipFilename
+          if [[ $? -gt 0 ]]; then
+            echo "[ERROR] Failed jfrog upload [$oriTarZipFilename]"
+            exit 1
+          fi
+
           echo [INFO] jfrog rt bp --build-name "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
           jfrog rt bp "${GITHUB_WORKFLOW} - ${{ env.ARTIFACT_BASE_NAME }}" ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}
           jfrog rt sp \
