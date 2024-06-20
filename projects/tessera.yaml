@@ -55,10 +55,10 @@
             enabled: false
         origin-tag-checker:
           upstream:
-            enabled: true
+            enabled: false
             api-url: repos/consensys/tessera/tags
             verify-sha:
-              enabled: true
+              enabled: false
           ## if upstream is enabled, local-file will be disabled
           local-file:
             enabled: true

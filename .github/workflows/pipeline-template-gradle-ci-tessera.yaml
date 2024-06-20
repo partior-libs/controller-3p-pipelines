@@ -263,7 +263,7 @@ jobs:
               echo "[ERROR] Unable to locate tag checker file: $localFileTagCheckerFile"
               exit 1
             fi
-            lastTag=$(cat $localFileTagCheckerFile | xargs)
+            lastTag=$(cat $localFileTagCheckerFile | sed 's/-SNAPSHOT//g' | xargs)
             lastTag=${lastTag}_patch
           fi
 
