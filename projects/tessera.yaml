@@ -58,7 +58,7 @@
             enabled: true
             api-url: repos/consensys/tessera/tags
             verify-sha:
-              enabled: false
+              enabled: true
           ## if upstream is enabled, local-file will be disabled
           local-file:
             enabled: true
