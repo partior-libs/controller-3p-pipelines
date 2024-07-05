@@ -544,7 +544,7 @@ jobs:
           directory: ./${{ env.DOCKERFILE_REPO }}
 
   docker-build:
-    name: 'Build Docker image and upload to github'
+    name: 'Build Docker image as workflow artifact'
     runs-on: ubuntu-20.04
     steps:
       - name: 'Check out project files'
