@@ -157,6 +157,8 @@ jobs:
 
   pre-build:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}
     needs: [ read-repo, read-config ] 
     env:
       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
@@ -269,6 +271,8 @@ jobs:
 
   ci-build:
     name: Build on ${{ matrix.os }}
+    concurrency:
+      group: ${{ github.workflow }}
     needs: [ pre-build, read-repo, read-config ] 
     env:
       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
@@ -282,7 +286,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "macos-latest"]
+        os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Setup Go 1.22

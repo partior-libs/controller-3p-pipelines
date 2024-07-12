@@ -204,6 +204,8 @@ jobs:
 
   pre-build-bin:
     needs: [read-config,read-repo]
+    concurrency:
+      group: ${{ github.workflow }}
     env:
       ALL_DELTA_COMMIT_MSG: ${{ needs.read-repo.outputs.DELTA-COMMIT-MSG }}
       ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
@@ -327,6 +329,8 @@ jobs:
 
   build-bin:
     name: 'Build binary for ${{ matrix.os }}'
+    concurrency:
+      group: ${{ github.workflow }}
     needs: [read-config, read-repo, pre-build-bin]
     env:
       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
@@ -340,7 +344,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu-20.04", "macos-latest" ]
+        os: [ "ubuntu-20.04" ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: 'Setup Go ${{ env.GO_VERSION }}'

@@ -157,6 +157,8 @@ jobs:
 
   ci-build:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}
     needs: [ read-repo, read-config ]
     env:
       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
