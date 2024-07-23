@@ -1,0 +1,33 @@
+docker:
+  ci:
+    artifact-base-name: acctests
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 0.0.1
+    branches:
+      feature:
+        build:
+          prebuild: 
+            enabled: true
+            script: "scripts/prebuild.sh"
+        prepare-release:
+          enabled: false
+        artifact:
+          packager:
+            enabled: false
+            artifactory-repo: debug-docker-local
+      master:
+        build:
+          prebuild: 
+            enabled: true
+            script: "scripts/prebuild.sh"
+        prepare-release:
+          enabled: true
+        artifact:
+          packager:
+            enabled: true
+            group: quorumengineering/partior
+            artifactory-repo: debug-docker-local
+            tag:
+              enabled: false
+              name: latest
