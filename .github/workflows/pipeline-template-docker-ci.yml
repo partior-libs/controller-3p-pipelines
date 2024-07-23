@@ -11,10 +11,6 @@ on:
       PROJECT-REPO:
         required: true
         type: string
-      RUNNER-TYPE:
-        required: false
-        type: string
-        default: self-hosted
 
 env:
   DOCKER_REGISTRY_BASE_URL: https://partior.jfrog.io/artifactory
@@ -23,7 +19,7 @@ env:
 
 jobs:
   read-repo:
-    runs-on: ${{ inputs.RUNNER-TYPE }}
+    runs-on: ubuntu-latest
     outputs:
       BRANCH-NAME: ${{ steps.get-repo.outputs.branch-name }}
       REPO-NAME: ${{ steps.get-repo.outputs.name }}
@@ -33,8 +29,8 @@ jobs:
       PR-TARGET-BRANCH: ${{ steps.get-repo.outputs.pr-target-branch }}
       SOURCE-BRANCH: ${{ steps.get-repo.outputs.source-branch }}
     steps:
-      - name: Install YQ
-        uses: partior-libs/gcs-setup-yq@partior-stable
+      # - name: Install YQ
+      #   uses: partior-libs/gcs-setup-yq@partior-stable
 
       - uses: actions/checkout@v3
         with:
@@ -98,8 +94,8 @@ jobs:
       PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
       SIGN-ARTIFACT:  ${{ steps.sign-artifact.outputs.enabled }}
     steps:
-      - name: Install YQ
-        uses: partior-libs/gcs-setup-yq@partior-stable
+      # - name: Install YQ
+      #   uses: partior-libs/gcs-setup-yq@partior-stable
 
       - uses: actions/checkout@v3
         with:
@@ -120,11 +116,11 @@ jobs:
       - name: Generate HELMFILE CI config importer
         uses: partior-libs/gcs-yaml-importer@partior-stable
         with:
-          yaml-file: projects/${{ steps.get-repo.outputs.name }}.yml
+          yaml-file: projects/${{ steps.get-repo.outputs.name }}.yaml
           query-path: .docker.ci
           set-sub-default-keys: .docker.ci-default
           output-file: ${{ env.YAML_CONFIG_IMPORTER }}
-          yaml-file-for-default: projects/docker-default.yml
+          yaml-file-for-default: projects/docker-default.yaml
           query-path-for-default: .docker.ci
           upload: true
 
@@ -137,11 +133,11 @@ jobs:
       - name: Generate CI branch config importer
         uses: partior-libs/gcs-yaml-importer@partior-stable
         with:
-          yaml-file: projects/${{ steps.get-repo.outputs.name }}.yml
+          yaml-file: projects/${{ steps.get-repo.outputs.name }}.yaml
           query-path: .docker.ci.branches.${{ steps.get-repo.outputs.branch-name }}
           set-sub-default-keys: .docker.ci.branches.default
           output-file: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
-          yaml-file-for-default: projects/docker-default.yml
+          yaml-file-for-default: projects/docker-default.yaml
           query-path-for-default: .docker.ci.branches.default
           upload: true
 
@@ -164,7 +160,7 @@ jobs:
           echo "enabled=${finalSignFlag}" >> $GITHUB_OUTPUT
 
   ci-build:
-    runs-on: ${{ inputs.RUNNER-TYPE }}
+    runs-on: ubuntu-latest
     needs: [ read-repo, read-config ] 
     env:
       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
@@ -180,8 +176,8 @@ jobs:
       ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
       ARTIFACTORY-DOCKER-REPO: ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}
     steps:
-      - name: Install YQ
-        uses: partior-libs/gcs-setup-yq@partior-stable
+      # - name: Install YQ
+      #   uses: partior-libs/gcs-setup-yq@partior-stable
 
       - name: Check Out Repo 
         uses: actions/checkout@v3

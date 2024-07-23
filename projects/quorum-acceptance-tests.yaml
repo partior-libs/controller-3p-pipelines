@@ -8,26 +8,27 @@ docker:
       feature:
         build:
           prebuild: 
-            enabled: true
+            enabled: false
             script: "scripts/prebuild.sh"
         prepare-release:
           enabled: false
         artifact:
           packager:
-            enabled: false
-            artifactory-repo: debug-docker-local
+            enabled: true
+            group: partior
+            artifactory-repo: 3p-docker-dev
       master:
         build:
           prebuild: 
-            enabled: true
+            enabled: false
             script: "scripts/prebuild.sh"
         prepare-release:
           enabled: true
         artifact:
           packager:
             enabled: true
-            group: quorumengineering/partior
-            artifactory-repo: debug-docker-local
+            group: partior
+            artifactory-repo: 3p-docker-release
             tag:
               enabled: false
               name: latest
