@@ -1,0 +1,136 @@
+docker:
+  ci:
+    artifact-base-name: default-docker-name
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 0.0.1
+      prepend-version:
+        enabled: false
+        rules:
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: PREPEND-LABEL
+      major-version:
+        enabled: true
+        rules:
+          branches: 
+            target: release,develop,hotfix
+            enabled: true
+          message-tag: 
+            target: MAJOR-VERSION 
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: MAJOR-VERSION
+      minor-version:
+        enabled: true
+        rules:
+          branches: 
+            target: release,develop,hotfix
+            enabled: true
+          message-tag: 
+            target: MINOR-VERSION 
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: MINOR-VERSION
+      patch-version:
+        enabled: false
+        rules:
+          branches: 
+            target: main,master
+            enabled: true
+          message-tag: 
+            target: PATCH-VERSION 
+            enabled: false
+          file:   
+            enabled: false
+            target: ./app-version.cfg
+            key: PATCH-VERSION
+      release-candidate-version:
+        enabled: true
+        identifier: rc
+        rules:
+          branches: 
+            target: release,hotfix
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: RC-VERSION
+      development-version:
+        enabled: true
+        identifier: dev
+        rules:
+          branches: 
+            target: develop,feature,bugfix
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: DEV-VERSION
+      build-version:
+        enabled: false
+        identifier: bld
+        rules:
+          branches: 
+            target: feature,bugfix
+            enabled: true
+      replacement:
+        enabled: true
+        file-token: 
+          enabled: false
+          target: version.yaml
+          token: '@@VERSION_BOT_TOKEN@@'
+        maven-pom: 
+          enabled: false
+          target: pom.xml
+        yaml-update: 
+          enabled: true
+          target: version.yaml
+          query-path: .version
+
+    branches:
+      default:
+        build:
+          dockerfile: Dockerfile
+          prebuild: 
+            enabled: false
+            script: ""
+        prepare-release:
+          enabled: false
+        artifact:
+          registry: partior.jfrog.io
+          packager:
+            enabled: false
+            tag:
+              enabled: false
+              name: latest-dev
+            signing:
+              enabled: true
+            group: partior
+            artifactory-username: svc-smc-read
+            artifactory-repo: goquorum-docker-dev-local
+            artifactory-dev-repo: goquorum-docker-dev-local
+            artifactory-release-repo: goquorum-docker-release-local
+            # folder-list: values
+            # file-list: helmfile.yaml,version.yaml
+            # store-version:
+            #   enabled: false
+            #   git:
+            #     enabled: false
+            #     repo: partior-quorum/deploy-goquorum-v2
+            #     ## Optional: search-list-key-path: Must contain @@SEARCH@@ as indication of which list item to be picked by matching "search-list-match-key-path-value"
+            #     # search-list-key-path: .releases.@@SEARCH@@.name
+            #     # search-list-match-key-path-value: ${ARTIFACT_BASE_NAME}
+            #     ## The token @@FOUND@@ must be used along with "search-list-key-path" and "search-list-match-key-path-value". @@FOUND@@ contain the numeric item number of a yaml list
+            #     # yaml-store-path-key: .releases.@@FOUND@@.version
+            #     ## Placeholder "@@ENV_NAME@@" will be replaced during iteration of list items in "store-version.git.target-envs"
+            #     target-env-file: config/modules-version-latest-dev.yml
+            #     # multi-target-env-files: config/@@ENV_NAME@@/gke-utility/helmfile.yaml,config/@@ENV_NAME@@/gke-its-node-1/helmfile.yaml,config/@@ENV_NAME@@/gke-its-utility/helmfile.yaml
+            #     strict-update: false
+            #     target-envs:
+            #       - NA

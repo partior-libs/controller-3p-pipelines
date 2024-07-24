@@ -1,0 +1,22 @@
+docker:
+  ci:
+    artifact-base-name: acctests
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 0.0.1
+    branches:
+      feature:
+        artifact:
+          packager:
+            enabled: true
+            group: partior
+            artifactory-repo: 3p-docker-dev
+      master:
+        artifact:
+          packager:
+            enabled: true
+            group: partior
+            artifactory-repo: 3p-docker-dev
+            tag:
+              enabled: true
+              name: latest
