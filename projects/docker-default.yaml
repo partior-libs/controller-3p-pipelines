@@ -41,7 +41,7 @@ docker:
         enabled: false
         rules:
           branches: 
-            target: main
+            target: main,master
             enabled: true
           message-tag: 
             target: PATCH-VERSION 

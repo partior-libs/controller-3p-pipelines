@@ -29,9 +29,6 @@ jobs:
       PR-TARGET-BRANCH: ${{ steps.get-repo.outputs.pr-target-branch }}
       SOURCE-BRANCH: ${{ steps.get-repo.outputs.source-branch }}
     steps:
-      # - name: Install YQ
-      #   uses: partior-libs/gcs-setup-yq@partior-stable
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -94,9 +91,6 @@ jobs:
       PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
       SIGN-ARTIFACT:  ${{ steps.sign-artifact.outputs.enabled }}
     steps:
-      # - name: Install YQ
-      #   uses: partior-libs/gcs-setup-yq@partior-stable
-
       - uses: actions/checkout@v3
         with:
           repository: ${{ inputs.CONTROLLER-REPO }}
@@ -176,9 +170,6 @@ jobs:
       ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
       ARTIFACTORY-DOCKER-REPO: ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}
     steps:
-      # - name: Install YQ
-      #   uses: partior-libs/gcs-setup-yq@partior-stable
-
       - name: Check Out Repo 
         uses: actions/checkout@v3
 
@@ -324,189 +315,3 @@ jobs:
           echo "[INFO] Start publishing build info..."
           echo jfrog rt bp
           jfrog rt bp
-
-          # Disable this part first - failing by Forbidden 403
-          # echo "[INFO] Start setting build props..."
-          # echo jfrog rt sp \
-          #   --build "${GITHUB_WORKFLOW}/${{ github.run_number }}" \
-          #   "git.commit_hash=${COMMIT_HASH};github.pr_number=${PR_NUMBER};github.pr_target_branch=${PR_TARGET_BRANCH};git.source_branch=${SOURCE_BRANCH};promotion.qualified=false"
-          # jfrog rt sp \
-          #   --build "${GITHUB_WORKFLOW}/${{ github.run_number }}" \
-          #   "git.commit_hash=${COMMIT_HASH};github.pr_number=${PR_NUMBER};github.pr_target_branch=${PR_TARGET_BRANCH};git.source_branch=${SOURCE_BRANCH};promotion.qualified=false"
-
-  # sign-artifact:
-  #   runs-on: ${{ inputs.RUNNER-TYPE }}
-  #   needs: [ read-repo, read-config, ci-build ]
-  #   if: needs.read-config.outputs.SIGN-ARTIFACT == 'true'
-  #   env:
-  #     ARTIFACT_NAME: ${{ needs.ci-build.outputs.ARTIFACT-NAME }}
-  #     ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
-  #     ARTIFACT_VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
-  #     REGISTRY_USERNAME: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
-  #     REGISTRY_PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-  #     COSIGN_PASSWORD: ${{ secrets.DOCKER_SIGNING_PASSPHRASE }}
-  #   steps:
-  #     - name: Install YQ
-  #       uses: partior-libs/gcs-setup-yq@partior-stable
-
-
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
-
-  #     - name: Start import pipeline branch config
-  #       id: pipeline-branch-config
-  #       run: |
-  #         echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
-  #         source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
-
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: ${{ env.YAML_CONFIG_IMPORTER }}
-
-  #     - name: Start import pipeline CI config
-  #       id: pipeline-ci-config
-  #       run: |
-  #         echo Importing ...${{ env.YAML_CONFIG_IMPORTER }}
-  #         source ./${{ env.YAML_CONFIG_IMPORTER }}
-
-  #     - name: Setup jfrog
-  #       if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
-  #       uses: jfrog/setup-jfrog-cli@v2
-  #       env:
-  #         JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
-
-  #     - name: Get Temporary Access Token
-  #       id: arti-access-token
-  #       if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
-  #       run: |
-  #         accessUsername=$(jf config show | grep "User:" | awk -F'[\t ]+' '{print $2}' | head -n 1)
-  #         accessToken=$(jf rt access-token-create | jq -r .access_token)
-  #         echo "ARTIFACTORY_TMP_USERNAME=${accessUsername}" >> ${GITHUB_ENV}
-  #         echo "ARTIFACTORY_TMP_TOKEN=${accessToken}" >> ${GITHUB_ENV}
-  #         echo "::add-mask::${accessToken}"
-  #         echo "[INFO] accessUsername: $accessUsername"
-
-  #     - name: Docker login
-  #       uses: docker/login-action@v2
-  #       with: 
-  #         registry: ${{ env.DOCKER_REGISTRY_BASE_URL }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}
-  #         username: ${{ env.ARTIFACTORY_TMP_USERNAME }}
-  #         password: ${{ env.ARTIFACTORY_TMP_TOKEN }}
-
-  #     - name: Install Cosign
-  #       uses: sigstore/cosign-installer@v2.6.0
-  #       with:
-  #         cosign-release: 'v1.12.0'
-
-  #     - name: Sign docker image
-  #       env:
-  #         REGISTRY_USERNAME: ${{ env.ARTIFACTORY_TMP_USERNAME }}
-  #         REGISTRY_PASSWORD: ${{ env.ARTIFACTORY_TMP_TOKEN }}
-  #         COSIGN_PASSWORD: ${{ secrets.DOCKER_SIGNING_PASSPHRASE }}
-  #         DOCKER_REGISTRY: ${{ steps.pipeline-branch-config.outputs.artifact_registry }}
-  #         DOCKER_REPO: ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}
-  #       run: |
-  #         echo "[INFO] Check cosign version..."
-  #         cosign version
-
-  #         echo "[INFO] Preparing keys..."
-  #         echo "${{ secrets.DOCKER_SIGNING_PRIVATE_KEY }}" > cosign.key
-  #         echo "${{ secrets.DOCKER_SIGNING_PUB_KEY }}" > cosign.pub
-     
-  #         echo $REGISTRY_PASSWORD | cosign login ${{ env.DOCKER_REGISTRY }} --username $REGISTRY_USERNAME --password-stdin
-
-  #         echo [INFO] Start signing 
-  #         cosign sign --key cosign.key ${{ env.DOCKER_REGISTRY }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ env.ARTIFACT_NAME }}:${{ env.ARTIFACT_VERSION }}
-          
-  #         echo [INFO] Start verifying... 
-  #         cosign verify --key cosign.pub ${{ env.DOCKER_REGISTRY }}/${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}/${{ env.ARTIFACT_NAME }}:${{ env.ARTIFACT_VERSION }} | jq .
-
-  # prepare-release:
-  #     runs-on: ${{ inputs.RUNNER-TYPE }}
-  #     needs: [ read-repo, read-config, ci-build ]
-  #     if: needs.read-config.outputs.PREPARE-RELEASE == 'true'
-  #     env:
-  #       ARTIFACT_BASE_NAME: ${{ needs.read-config.outputs.ARTIFACT-BASE-NAME }}
-  #       ARTIFACT_VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
-  #       BRANCH_NAME: ${{ needs.read-repo.outputs.BRANCH-NAME }}
-  #       COMMIT_HASH: ${{ needs.read-repo.outputs.COMMIT-HASH }}
-  #       REPO_NAME: ${{ needs.read-repo.outputs.REPO-NAME }}
-        
-  #     steps:
-  #     - name: Install YQ
-  #       uses: partior-libs/gcs-setup-yq@partior-stable
-
-  #     - name: Tag release version on code baseline
-  #       uses: partior-libs/gcs-pipe-utils/actions/generic-git-tag@partior-stable
-  #       with: 
-  #         target-repo: "${{ github.repository }}"
-  #         artifact-version: "${{ env.ARTIFACT_VERSION }}"
-  #         target-repo-ref: "${{ env.COMMIT_HASH }}"
-  #         pat-token: ${{ secrets.GH_REPO_READER_TOKEN }}
-
-  #     - name: Create release
-  #       uses: partior-libs/gjs-create-release@partior-stable
-  #       with:
-  #         name: "v${{ env.ARTIFACT_VERSION }}"
-  #         body: "Auto generated: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-  #         target_commitish: "${{ env.COMMIT_HASH }}"
-  #         generate_release_notes: true
-  #         tag_name: "v${{ env.ARTIFACT_VERSION }}"
-  #         repository: "${{ github.repository }}"
-  #         token: ${{ secrets.GH_REPO_READER_TOKEN }}
-  #         append_body: true
-
-  # upload-config-data:
-  #   needs: [ read-repo, read-config, ci-build ]
-  #   if: always()
-  #   runs-on: self-hosted
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Create config json file
-  #       run: |   
-  #         mkdir config-output
-  #         mkdir config-output/docker
-  #         timestamp=$(date +"%Y-%m-%d %H:%M:%S %Z")
-
-  #         json_data_docker='{
-  #           "version": "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}",
-  #           "source_branch": "${{ needs.read-repo.outputs.SOURCE-BRANCH }}",
-  #           "commit_hash": "${{ needs.read-repo.outputs.COMMIT-HASH }}",
-  #           "commit_msg": "${{ needs.read-repo.outputs.DELTA-COMMIT-MSG }}",
-  #           "commit_author": "${{ needs.read-repo.outputs.COMMIT-AUTHOR }}",
-  #           "last_commit_hash": "${{ needs.read-repo.outputs.LAST-COMMIT-HASH }}",
-  #           "last_commit_msg": "${{ needs.read-repo.outputs.LAST-COMMIT-MSG }}",
-  #           "last_commit_author": "${{ needs.read-repo.outputs.LAST-COMMIT-AUTHOR }}",
-  #           "git_repo_name": "${{ github.repository }}",
-  #           "pr_num": "${{ needs.read-repo.outputs.PR-NUM }}",
-  #           "pr_target_branch": "${{ needs.read-repo.outputs.PR-TARGET-BRANCH }}",
-  #           "build_actor": "${{ needs.read-repo.outputs.BUILD-ACTOR }}",
-  #           "repository_path": "${{ needs.ci-build.outputs.ARTIFACTORY-DOCKER-REPO }}/${{ needs.ci-build.outputs.ARTIFACT-NAME }}/${{ needs.ci-build.outputs.ARTIFACT-VERSION }}/",
-  #           "file_url": "https://partior.jfrog.io/artifactory/${{ needs.ci-build.outputs.ARTIFACTORY-DOCKER-REPO }}/${{ needs.ci-build.outputs.ARTIFACT-NAME }}/${{ needs.ci-build.outputs.ARTIFACT-VERSION }}/",
-  #           "name": "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}",
-  #           "workflow_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-  #           "workflow_start_datetime": "${{ needs.read-repo.outputs.WORKFLOW-START-TIMESTAMP }}",
-  #           "workflow_end_datetime": "'"$timestamp"'"
-  #         }'
-
-  #         echo "$json_data_docker" | jq . > config-output/docker/build.json
-
-  #     - name: Upload Config Artifacts
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: consul-config
-  #         path: config-output
-
-  # post-task-publish-config-docker:
-  #   needs: [ read-repo, read-config, ci-build, upload-config-data ]
-  #   if: always()
-  #   uses: partior-libs/controller-generic-pipelines/.github/workflows/pipeline-template-publish-consul-config.yaml@main
-  #   with:
-  #     CONFIG-TYPE: build
-  #     ARTIFACT-BASE-NAME: ${{ needs.ci-build.outputs.ARTIFACT_BASE_NAME }}
-  #     ARTIFACT-BRANCH-NAME: ${{ needs.read-repo.outputs.SOURCE-BRANCH }}
-  #     ARTIFACT-BRANCH-TYPE: ${{ needs.read-repo.outputs.BRANCH-NAME }}
-  #     ARTIFACT-VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
-  #     ARTIFACT-TYPE: docker
-  #   secrets: inherit

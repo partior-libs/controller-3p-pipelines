@@ -6,29 +6,17 @@ docker:
       initial-release-version: 0.0.1
     branches:
       feature:
-        build:
-          prebuild: 
-            enabled: false
-            script: "scripts/prebuild.sh"
-        prepare-release:
-          enabled: false
         artifact:
           packager:
             enabled: true
             group: partior
             artifactory-repo: 3p-docker-dev
       master:
-        build:
-          prebuild: 
-            enabled: false
-            script: "scripts/prebuild.sh"
-        prepare-release:
-          enabled: true
         artifact:
           packager:
             enabled: true
             group: partior
-            artifactory-repo: 3p-docker-release
+            artifactory-repo: 3p-docker-dev
             tag:
-              enabled: false
+              enabled: true
               name: latest
