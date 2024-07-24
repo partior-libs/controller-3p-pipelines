@@ -23,7 +23,7 @@ env:
   GOPATH: ${{ github.workspace }}/go
   WORKING_DIR: ${{ github.workspace }}/go/src/github.com/ethereum/go-ethereum
   DOCKER_REGISTRY_BASE_URL: https://partior.jfrog.io/artifactory
-  DOCKER_ARTIFACTORY_REPO: debug-docker-local
+  DOCKER_ARTIFACTORY_REPO: 3p-docker-dev
   DOCKER_REGISTRY: partior.jfrog.io
 
 jobs:
@@ -564,7 +564,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ steps.setup.outputs.outputDir }}:${{ steps.setup.outputs.outputDir  }} \
             --env-file ${{ steps.setup.outputs.dockerEnvFile }} \
-            ${{ env.DOCKER_REGISTRY}}/${{ env.DOCKER_ARTIFACTORY_REPO }}/quorumengineering/partior/acctests:latest test \
+            ${{ env.DOCKER_REGISTRY}}/${{ env.DOCKER_ARTIFACTORY_REPO }}/partior/acctests:latest test \
               -Pauto \
               -Dauto.outputDir=${{ steps.setup.outputs.outputDir  }} \
               -Dtags="${{ matrix.tag }}"
