@@ -183,6 +183,7 @@ jobs:
       SOURCE_BRANCH: ${{ needs.read-repo.outputs.SOURCE-BRANCH }}
     outputs:
       ARTIFACT-VERSION: ${{ steps.version-bot.outputs.artifact-version-name }}
+      VAULT-VERSION: ${{ steps.pipeline-branch-config.outputs.acceptance-test_vault-version }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -701,11 +702,15 @@ jobs:
 #        run: |
 #          ./gradlew :tests:acceptance-test:test --tests RunAzureIT --info
       - name: Run hashicorp tests
+        env:
+          VAULT_VERSION: ${{ needs.ci-build.outputs.VAULT-VERSION }}
         run: |
-          wget https://releases.hashicorp.com/vault/1.2.2/vault_1.2.2_linux_amd64.zip -O /tmp/vault_1.2.2_linux_amd64.zip
+          echo "[INFO] Setting vault version: ${VAULT_VERSION}"
+          wget https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip -O /tmp/vault_${VAULT_VERSION}_linux_amd64.zip
           mkdir -p vault/bin && pushd $_
-          unzip /tmp/vault_1.2.2_linux_amd64.zip
+          unzip /tmp/vault_${VAULT_VERSION}_linux_amd64.zip
           export PATH=$PATH:$PWD && popd
+          echo "[INFO] Start acceptance test: ./gradlew :tests:acceptance-test:test --tests RunHashicorpIT --info"
           ./gradlew :tests:acceptance-test:test --tests RunHashicorpIT --info
       - name: Upload junit reports
         uses: actions/upload-artifact@v3
