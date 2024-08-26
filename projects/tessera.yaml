@@ -20,6 +20,8 @@
             key: TESSERA-VERSION
     branches:
       default:
+        acceptance-test:
+          vault-version: 1.13.1
         java-version: 17
         prepare-release:
           enabled: false
