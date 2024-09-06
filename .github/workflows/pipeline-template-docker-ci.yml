@@ -29,7 +29,7 @@ jobs:
       PR-TARGET-BRANCH: ${{ steps.get-repo.outputs.pr-target-branch }}
       SOURCE-BRANCH: ${{ steps.get-repo.outputs.source-branch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           
@@ -91,7 +91,7 @@ jobs:
       PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
       SIGN-ARTIFACT:  ${{ steps.sign-artifact.outputs.enabled }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.CONTROLLER-REPO }}
           ref: ${{ inputs.CONTROLLER-REF }}
@@ -171,7 +171,7 @@ jobs:
       ARTIFACTORY-DOCKER-REPO: ${{ steps.pipeline-branch-config.outputs.artifact_packager_artifactory-repo }}
     steps:
       - name: Check Out Repo 
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v3
         with:
@@ -249,7 +249,7 @@ jobs:
           driver: docker
 
       - name: Setup jfrog
-        uses: jfrog/setup-jfrog-cli@v2
+        uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
 

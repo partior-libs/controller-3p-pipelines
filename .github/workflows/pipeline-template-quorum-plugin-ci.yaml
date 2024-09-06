@@ -31,7 +31,7 @@ jobs:
       COMMIT-SHA: ${{ steps.get-repo.outputs.commit-sha }}
       FLATTEN-BRANCH: ${{ steps.get-repo.outputs.flatten-branch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -77,7 +77,7 @@ jobs:
       ENABLE-ARTIFACT-PACKAGER: ${{ steps.pipeline-branch-config.outputs.artifact_packager_enabled }}
       PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.CONTROLLER-REPO }}
           ref: ${{ inputs.CONTROLLER-REF }}
@@ -142,7 +142,7 @@ jobs:
           echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: ${{ steps.pipeline-branch-config.outputs.gitleaks_scan-depth }}
 
@@ -172,7 +172,7 @@ jobs:
       ARTIFACT-VERSION: ${{ steps.version-bot.outputs.artifact-version-name }}
     steps:
       - name: Check Out Repo 
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -290,14 +290,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Setup Go 1.22
-        uses: actions/setup-go@v4
+        uses: 5
         with:
           go-version: 1.22
 
       - name: Check out project files
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
@@ -329,7 +329,7 @@ jobs:
 
       - name: Setup jfrog
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
-        uses: jfrog/setup-jfrog-cli@v3
+        uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
 
@@ -417,21 +417,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Setup Go 1.18
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.18
       - name: Checkout project files
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: main
       - name: Checkout quorum-signer Vault plugin
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ConsenSys/quorum-signer-plugin-for-hashicorp-vault
           path: quorum-signer
           ref: v0.2.0
       - name: Checkout quorum
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ConsenSys/quorum
           path: quorum
@@ -498,7 +498,7 @@ jobs:
       GO111MODULE: on
     steps:
       - name: Checkout code from SCM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # - name: Extract version metadata
       #   id: meta

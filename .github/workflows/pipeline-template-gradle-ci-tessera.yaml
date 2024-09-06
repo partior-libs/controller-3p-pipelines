@@ -35,7 +35,7 @@ jobs:
       COMMIT-SHA: ${{ steps.get-repo.outputs.commit-sha }}
       FLATTEN-BRANCH: ${{ steps.get-repo.outputs.flatten-branch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -81,7 +81,7 @@ jobs:
       ENABLE-ARTIFACT-PACKAGER: ${{ steps.pipeline-branch-config.outputs.artifact_packager_enabled }}
       PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.CONTROLLER-REPO }}
           ref: ${{ inputs.CONTROLLER-REF }}
@@ -146,7 +146,7 @@ jobs:
           echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: ${{ steps.pipeline-branch-config.outputs.gitleaks_scan-depth }}
 
@@ -162,8 +162,8 @@ jobs:
   check-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: 17
       - run: ./gradlew dependencyCheckAnalyze -x test
@@ -185,7 +185,7 @@ jobs:
       ARTIFACT-VERSION: ${{ steps.version-bot.outputs.artifact-version-name }}
       VAULT-VERSION: ${{ steps.pipeline-branch-config.outputs.acceptance-test_vault-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -221,7 +221,7 @@ jobs:
           echo "[INFO] accessUsername: $accessUsername"
 
       - name: Setup Java ${{ steps.pipeline-branch-config.outputs.java-version }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: ${{ steps.pipeline-branch-config.outputs.java-version }}
@@ -313,7 +313,7 @@ jobs:
 
       - name: Cache Gradle packages
         if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
@@ -432,9 +432,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code from SCM
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Java
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: 'adopt'
         java-version: 17
@@ -459,9 +459,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code from SCM
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Java
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: 'adopt'
         java-version: 17
@@ -475,9 +475,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code from SCM
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Java
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: 'adopt'
         java-version: 17
@@ -535,9 +535,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code from SCM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: 17
@@ -595,9 +595,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code from SCM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: 17
@@ -658,8 +658,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code from SCM
-        uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: 17
@@ -731,9 +731,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code from SCM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: 17
@@ -791,7 +791,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code from SCM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download tessera dist
         uses: actions/download-artifact@v3
         with:
@@ -827,9 +827,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code from SCM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: 14
@@ -860,7 +860,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Checkout code from SCM
-  #       uses: actions/checkout@v3
+  #       uses: actions/checkout@v4
   #     - name: Download tessera dists
   #       uses: actions/download-artifact@v3
   #       with:
