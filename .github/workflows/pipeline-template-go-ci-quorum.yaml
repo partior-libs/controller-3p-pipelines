@@ -40,7 +40,7 @@ jobs:
       COMMIT-SHA: ${{ steps.get-repo.outputs.commit-sha }}
       FLATTEN-BRANCH: ${{ steps.get-repo.outputs.flatten-branch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -86,7 +86,7 @@ jobs:
       ENABLE-ARTIFACT-PACKAGER: ${{ steps.pipeline-branch-config.outputs.artifact_packager_enabled }}
       PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.CONTROLLER-REPO }}
           ref: ${{ inputs.CONTROLLER-REF }}
@@ -151,7 +151,7 @@ jobs:
           echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: ${{ steps.pipeline-branch-config.outputs.gitleaks_scan-depth }}
 
@@ -181,11 +181,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: 'Setup Go ${{ env.GO_VERSION }}'
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: 'Check out project files'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           path: ${{ env.WORKING_DIR }}
@@ -217,7 +217,7 @@ jobs:
       ARTIFACT-VERSION: ${{ steps.version-bot.outputs.artifact-version-name}}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -237,7 +237,7 @@ jobs:
 
 
       - name: Setup jfrog
-        uses: jfrog/setup-jfrog-cli@v3
+        uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
 
@@ -348,7 +348,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: 'Setup Go ${{ env.GO_VERSION }}'
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -370,7 +370,7 @@ jobs:
           echo "version=v${{ env.ARTIFACT_VERSION }}" >> $GITHUB_OUTPUT
           
       - name: 'Check out project files'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: ${{ env.WORKING_DIR }}
 
@@ -421,7 +421,7 @@ jobs:
 
       - name: Setup jfrog
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
-        uses: jfrog/setup-jfrog-cli@v3
+        uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
 
@@ -484,7 +484,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: 'Check out project files'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: 'Build docker image'
         id: build
         run: |
@@ -539,7 +539,7 @@ jobs:
           echo "outputDir=${{ runner.temp }}" >> $GITHUB_OUTPUT
           echo "dockerEnvFile=$docker_env_file" >> $GITHUB_OUTPUT
       - name: Setup jfrog
-        uses: jfrog/setup-jfrog-cli@v3
+        uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_ENV_1: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
       - name: Get Temporary Access Token
@@ -695,7 +695,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: 'Checkout'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: 'Download workflow artifact - Docker image'
         uses: actions/download-artifact@v3
         with:
@@ -708,7 +708,7 @@ jobs:
           docker image tag quorumengineering/quorum:pr quorumengineering/quorum:develop
           docker image ls
       - name: Set up Java
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           distribution: 'adopt'
           java-version: 11
@@ -765,7 +765,7 @@ jobs:
   #   runs-on: ubuntu-20.04
   #   steps:
   #     - name: 'Checkout'
-  #       uses: actions/checkout@v3
+  #       uses: actions/checkout@v4
   #     - name: 'Build and publish to Docker Hub'
   #       uses: docker/build-push-action@v1
   #       with:
