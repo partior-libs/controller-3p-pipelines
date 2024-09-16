@@ -136,7 +136,7 @@ jobs:
     needs: [ read-config ]
     if: needs.read-config.outputs.ENABLE-GITLEAKS == 'true'
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -189,7 +189,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -199,7 +199,7 @@ jobs:
           echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_CONFIG_IMPORTER }}
 
@@ -344,7 +344,7 @@ jobs:
           jf gradle build -x dependencyCheckAnalyze -x javadoc -x test --info
 
       - name: Upload kalium encryptor dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: kalium-dist
           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
@@ -387,28 +387,28 @@ jobs:
           jf rt cp --flat=true $sourceRepo/$groupNamePath/hashicorp-key-vault/$version/hashicorp-key-vault-$version.tar $targetRepo/hashicorp-key-vault/$version/hashicorp-key-vault-$version.tar
 
       - name: Upload tessera dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: success()
         with:
           name: tessera-dists
           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
       - name: Upload tessera enclave dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: enclave-dists
           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
       - name: Upload aws key vault dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: aws-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
       - name: Upload azure key vault dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: azure-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
       - name: Upload hashicorp key vault dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hashicorp-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
@@ -483,32 +483,32 @@ jobs:
         java-version: 17
         check-latest: true
     - name: Download tessera dist
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: tessera-dists
         path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
     - name: Download tessera enclave dist
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: enclave-dists
         path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
     - name: Download aws key vault dist
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: aws-key-vault-dist
         path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
     - name: Download azure key vault dist
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: azure-key-vault-dist
         path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
     - name: Download hashicorp key vault dist
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: hashicorp-key-vault-dist
         path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
     - name: Download kalium encryptor dist
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: kalium-dist
         path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
@@ -517,13 +517,13 @@ jobs:
         echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
         ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --fail-fast -PexcludeTests="RunHashicorpIT,AwsKeyVaultIT,RecoverIT,RunAzureIT,RestSuiteHttpH2RemoteEnclaveEncTypeEC,CucumberTestSuite" --info
     - name: Upload Junit reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
        name: itest-junit-report
        path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
     - name: Upload test logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
        name: itest-logs
@@ -543,32 +543,32 @@ jobs:
           java-version: 17
           check-latest: true
       - name: Download tessera dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tessera-dists
           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
       - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: enclave-dists
           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
       - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: aws-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
       - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: azure-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
       - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: hashicorp-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
       - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kalium-dist
           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
@@ -577,13 +577,13 @@ jobs:
           echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
           ./gradlew :tests:acceptance-test:test --tests RestSuiteHttpH2RemoteEnclave --tests RestSuiteHttpH2RemoteEnclaveEncTypeEC --info
       - name: Upload junit reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: remote_enclave_itest-junit-report
           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: remote_enclave_itest-logs
@@ -603,32 +603,32 @@ jobs:
           java-version: 17
           check-latest: true
       - name: Download tessera dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tessera-dists
           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
       - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: enclave-dists
           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
       - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: aws-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
       - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: azure-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
       - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: hashicorp-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
       - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kalium-dist
           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
@@ -640,13 +640,13 @@ jobs:
 
           ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --tests CucumberTestSuite --info
       - name: Upload junit reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cucumber_itest-junit-report
           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cucumber_itest-logs
@@ -665,32 +665,32 @@ jobs:
           java-version: 17
           check-latest: true
       - name: Download tessera dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tessera-dists
           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
       - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: enclave-dists
           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
       - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: aws-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
       - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: azure-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
       - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: hashicorp-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
       - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kalium-dist
           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
@@ -713,13 +713,13 @@ jobs:
           echo "[INFO] Start acceptance test: ./gradlew :tests:acceptance-test:test --tests RunHashicorpIT --info"
           ./gradlew :tests:acceptance-test:test --tests RunHashicorpIT --info
       - name: Upload junit reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: vault-itest-junit-report
           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: vault-itest-logs
@@ -739,32 +739,32 @@ jobs:
           java-version: 17
           check-latest: true
       - name: Download tessera dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tessera-dists
           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
       - name: Download tessera enclave dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: enclave-dists
           path: /home/runner/work/tessera/tessera/enclave/enclave-jaxrs/build/distributions/
       - name: Download aws key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: aws-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/aws-key-vault/build/distributions/
       - name: Download azure key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: azure-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/azure-key-vault/build/distributions/
       - name: Download hashicorp key vault dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: hashicorp-key-vault-dist
           path: /home/runner/work/tessera/tessera/key-vault/hashicorp-key-vault/build/distributions/
       - name: Download kalium encryptor dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kalium-dist
           path: /home/runner/work/tessera/tessera/encryption/encryption-kalium/build/distributions/
@@ -773,13 +773,13 @@ jobs:
           echo "${{ needs.ci-build.outputs.ARTIFACT-VERSION }}" > version.txt
           ./gradlew :tests:acceptance-test:clean :tests:acceptance-test:test --tests RecoverIT --info
       - name: Upload junit reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: recovery_itest-junit-report
           path: /home/runner/work/tessera/tessera/tests/acceptance-test/build/reports/tests/
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: recovery-itest-logs
@@ -793,7 +793,7 @@ jobs:
       - name: Checkout code from SCM
         uses: actions/checkout@v4
       - name: Download tessera dist
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tessera-dists
           path: /home/runner/work/tessera/tessera/tessera-dist/build/distributions/
@@ -816,7 +816,7 @@ jobs:
           context: .
           outputs: type=docker,dest=/tmp/tessera-develop-image.tar
       - name: upload-artifact portable Docker image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tessera-develop-image
           path: /tmp/tessera-develop-image.tar
@@ -835,7 +835,7 @@ jobs:
           java-version: 14
           check-latest: true
       - name: download-artifact portable Docker image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tessera-develop-image
           path: /tmp
@@ -849,7 +849,7 @@ jobs:
         run:
           docker run --entrypoint /bin/sh --network host -v /tmp/run/sh:/tmp/run.sh -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/acctests:/tmp/acctests -e TF_VAR_tessera_docker_image='{name="${{ env.TESSERA_DOCKER_IMAGE }}:develop",local=true}' -e TF_VAR_quorum_docker_image='{name="${{ env.QUORUM_DOCKER_IMAGE }}:latest",local=false}' quorumengineering/acctests:latest -c "./mvnw --no-transfer-progress -B -DskipToolsCheck test -Pauto -Dtags='\!async && (basic || basic-istanbul || networks/typical::istanbul)' -Dauto.outputDir=/tmp/acctests -Dnetwork.forceDestroy=true && cp -R /workspace/target/gauge /tmp/acctests/gauge && chmod -R 775 /tmp/acctests/gauge"
       - name: Upload Gauge report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: gauge-reports

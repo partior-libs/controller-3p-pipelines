@@ -141,7 +141,7 @@ jobs:
     needs: [ read-config ]
     if: needs.read-config.outputs.ENABLE-GITLEAKS == 'true'
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -221,7 +221,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -231,7 +231,7 @@ jobs:
           echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_CONFIG_IMPORTER }}
 
@@ -352,7 +352,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -413,7 +413,7 @@ jobs:
           fi
 
       - name: 'Upload artifact'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ env.WORKING_DIR }}/build/artifact
           name: ${{ steps.env.outputs.key }}
@@ -495,7 +495,7 @@ jobs:
           tar cfvz $output_dir/quorum-pr.tar.gz quorum-pr.tar
           echo "output_dir=$output_dir" >> $GITHUB_OUTPUT
       - name: 'Upload workflow artifact - Docker image'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-image
           path: ${{ steps.build.outputs.output_dir }}
@@ -525,7 +525,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: 'Download workflow artifact - Docker image'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-image
       - name: 'Load Docker image'
@@ -697,7 +697,7 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v4
       - name: 'Download workflow artifact - Docker image'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-image
       - name: 'Load Docker image'

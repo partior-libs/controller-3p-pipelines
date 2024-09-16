@@ -132,7 +132,7 @@ jobs:
     needs: [ read-config ]
     if: needs.read-config.outputs.ENABLE-GITLEAKS == 'true'
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -176,7 +176,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -186,7 +186,7 @@ jobs:
           echo Importing ...${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
           source ./${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_CONFIG_IMPORTER }}
 
@@ -298,7 +298,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ env.YAML_BRANCH_CONFIG_IMPORTER }}
 
@@ -370,7 +370,7 @@ jobs:
 
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.meta.outputs.os_arch }}
           path: build/dist/*.*
@@ -486,7 +486,7 @@ jobs:
           make -C main itest
       - if: ${{ failure() }}
         name: Upload test output
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-testout
           path: main/internal/test/integration/testout/
