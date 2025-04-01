@@ -18,42 +18,70 @@
             enabled: false
             target: ./app-version.cfg
             key: PREPEND-LABEL
+      rebase-version:
+        enabled: true
+        identifier: hf
+        validation:
+          fail-nonexistent:
+            enabled: true
+        rules:
+          branches: 
+            target: hotfix-base,rebase
+            enabled: true
       major-version:
         enabled: true
         rules:
           branches: 
-            target: release,develop,hotfix
+            target: release,feature,main,develop,hotfix
             enabled: true
+          labels: 
+            target: MAJOR-VERSION 
+            enabled: false
+          tag: 
+            target: MAJOR-VERSION 
+            enabled: false
           message-tag: 
             target: MAJOR-VERSION 
             enabled: true
           file:
-            enabled: false
+            enabled: true
             target: ./app-version.cfg
             key: MAJOR-VERSION
       minor-version:
         enabled: true
         rules:
           branches: 
-            target: release,develop,hotfix
+            target: release,feature,main,develop,hotfix
             enabled: true
+          tag: 
+            target: MINOR-VERSION 
+            enabled: false
           message-tag: 
             target: MINOR-VERSION 
             enabled: true
-          file:
+          labels: 
+            target: MINOR-VERSION  
             enabled: false
+          file:
+            enabled: true
             target: ./app-version.cfg
             key: MINOR-VERSION
       patch-version:
-        enabled: false
+        enabled: true
         rules:
           branches: 
             target: main
             enabled: true
+          tag: 
+            target: PATCH-VERSION 
+            enabled: false
           message-tag: 
             target: PATCH-VERSION 
             enabled: false
-          file:   
+          labels: 
+            target: PATCH-VERSION
+            enabled: false
+          file:
             enabled: false
             target: ./app-version.cfg
             key: PATCH-VERSION
@@ -64,6 +92,9 @@
           branches: 
             target: release,hotfix,
             enabled: true
+          tag: 
+            target: RC-VERSION
+            enabled: false
           file:
             enabled: false
             target: ./app-version.cfg
@@ -75,6 +106,9 @@
           branches: 
             target: develop,feature,bugfix,ci
             enabled: true
+          tag: 
+            target: DEV-VERSION
+            enabled: false
           file:
             enabled: false
             target: ./app-version.cfg
