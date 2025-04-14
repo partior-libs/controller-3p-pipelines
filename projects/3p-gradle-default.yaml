@@ -34,12 +34,6 @@
           branches: 
             target: release,feature,main,develop,hotfix
             enabled: true
-          labels: 
-            target: MAJOR-VERSION 
-            enabled: false
-          tag: 
-            target: MAJOR-VERSION 
-            enabled: false
           message-tag: 
             target: MAJOR-VERSION 
             enabled: true
@@ -53,15 +47,9 @@
           branches: 
             target: release,feature,main,develop,hotfix
             enabled: true
-          tag: 
-            target: MINOR-VERSION 
-            enabled: false
           message-tag: 
             target: MINOR-VERSION 
             enabled: true
-          labels: 
-            target: MINOR-VERSION  
-            enabled: false
           file:
             enabled: true
             target: ./app-version.cfg
@@ -72,14 +60,8 @@
           branches: 
             target: main
             enabled: true
-          tag: 
-            target: PATCH-VERSION 
-            enabled: false
           message-tag: 
             target: PATCH-VERSION 
-            enabled: false
-          labels: 
-            target: PATCH-VERSION
             enabled: false
           file:
             enabled: false
@@ -92,9 +74,6 @@
           branches: 
             target: release,hotfix,
             enabled: true
-          tag: 
-            target: RC-VERSION
-            enabled: false
           file:
             enabled: false
             target: ./app-version.cfg
@@ -106,9 +85,6 @@
           branches: 
             target: develop,feature,bugfix,ci
             enabled: true
-          tag: 
-            target: DEV-VERSION
-            enabled: false
           file:
             enabled: false
             target: ./app-version.cfg

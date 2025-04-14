@@ -27,12 +27,6 @@ docker:
           branches: 
             target: release,feature,main,develop,hotfix
             enabled: true
-          labels: 
-            target: MAJOR-VERSION 
-            enabled: false
-          tag: 
-            target: MAJOR-VERSION 
-            enabled: false
           message-tag: 
             target: MAJOR-VERSION 
             enabled: true
@@ -46,15 +40,9 @@ docker:
           branches: 
             target: release,feature,main,develop,hotfix
             enabled: true
-          tag: 
-            target: MINOR-VERSION 
-            enabled: false
           message-tag: 
             target: MINOR-VERSION 
             enabled: true
-          labels: 
-            target: MINOR-VERSION  
-            enabled: false
           file:
             enabled: true
             target: ./app-version.cfg
@@ -65,14 +53,8 @@ docker:
           branches: 
             target: main,master
             enabled: true
-          tag: 
-            target: PATCH-VERSION 
-            enabled: false
           message-tag: 
             target: PATCH-VERSION 
-            enabled: false
-          labels: 
-            target: PATCH-VERSION
             enabled: false
           file:
             enabled: false
@@ -85,9 +67,6 @@ docker:
           branches: 
             target: release,hotfix
             enabled: true
-          tag: 
-            target: RC-VERSION
-            enabled: false
           file:
             enabled: false
             target: ./app-version.cfg
@@ -99,9 +78,6 @@ docker:
           branches: 
             target: develop,feature,bugfix
             enabled: true
-          tag: 
-            target: DEV-VERSION
-            enabled: false
           file:
             enabled: false
             target: ./app-version.cfg
