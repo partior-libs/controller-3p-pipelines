@@ -29,7 +29,7 @@ docker:
             enabled: true
           message-tag: 
             target: MAJOR-VERSION 
-            enabled: true
+            enabled: false
           file:
             enabled: true
             target: ./app-version.cfg
@@ -42,7 +42,7 @@ docker:
             enabled: true
           message-tag: 
             target: MINOR-VERSION 
-            enabled: true
+            enabled: false
           file:
             enabled: true
             target: ./app-version.cfg
