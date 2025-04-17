@@ -18,34 +18,44 @@
             enabled: false
             target: ./app-version.cfg
             key: PREPEND-LABEL
+      rebase-version:
+        enabled: true
+        identifier: hf
+        validation:
+          fail-nonexistent:
+            enabled: true
+        rules:
+          branches: 
+            target: hotfix-base,rebase
+            enabled: true
       major-version:
         enabled: true
         rules:
           branches: 
-            target: release,develop,hotfix
+            target: release,feature,main,develop,hotfix
             enabled: true
           message-tag: 
             target: MAJOR-VERSION 
-            enabled: true
-          file:
             enabled: false
+          file:
+            enabled: true
             target: ./app-version.cfg
             key: MAJOR-VERSION
       minor-version:
         enabled: true
         rules:
           branches: 
-            target: release,develop,hotfix
+            target: release,feature,main,develop,hotfix
             enabled: true
           message-tag: 
             target: MINOR-VERSION 
-            enabled: true
-          file:
             enabled: false
+          file:
+            enabled: true
             target: ./app-version.cfg
             key: MINOR-VERSION
       patch-version:
-        enabled: false
+        enabled: true
         rules:
           branches: 
             target: main,base
@@ -53,7 +63,7 @@
           message-tag: 
             target: PATCH-VERSION 
             enabled: false
-          file:   
+          file:
             enabled: false
             target: ./app-version.cfg
             key: PATCH-VERSION

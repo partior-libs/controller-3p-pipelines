@@ -311,7 +311,16 @@ jobs:
             echo "[ERROR] Detected failure in retrieving remote tag. Please check the log and resolve the issue before proceeding..."
             exit 1
           fi
-          echo "QUORUM-VERSION=$lastTag" > ./app-version.cfg
+          versionFile="./app-version.cfg"
+          if [[ -f "${versionFile}" ]]; then
+              if grep -q "^QUORUM-VERSION=.*" "${versionFile}"; then
+                  sed -i "s|^QUORUM-VERSION=.*|QUORUM-VERSION=${lastTag}|" "${versionFile}"
+              else
+                  echo "QUORUM-VERSION=${lastTag}" >> "${versionFile}"
+              fi
+          else
+              echo "QUORUM-VERSION=${lastTag}" > "${versionFile}"
+          fi
           echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
 
       - name: Start versioning bot

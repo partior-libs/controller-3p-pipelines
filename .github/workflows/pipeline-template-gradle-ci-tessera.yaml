@@ -295,7 +295,16 @@ jobs:
           fi
 
           echo "[INFO] Last tag found: $lastTag"
-          echo "TESSERA-VERSION=$lastTag" > ./app-version.cfg
+          versionFile="./app-version.cfg"
+          if [[ -f "${versionFile}" ]]; then
+              if grep -q "^TESSERA-VERSION=.*" "${versionFile}"; then
+                  sed -i "s|^TESSERA-VERSION=.*|TESSERA-VERSION=${lastTag}|" "${versionFile}"
+              else
+                  echo "TESSERA-VERSION=${lastTag}" >> "${versionFile}"
+              fi
+          else
+              echo "TESSERA-VERSION=${lastTag}" > "${versionFile}"
+          fi
           echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
 
       - name: Start versioning bot
