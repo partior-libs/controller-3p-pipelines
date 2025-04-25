@@ -1,0 +1,116 @@
+---
+controller:
+  ci:
+    artifact-base-name: default-artifact-name
+    artifact-auto-versioning:
+      enabled: true
+      initial-release-version: 1.0.0
+      version-sources:
+        artifactory:
+          enabled: false
+        jira:
+          enabled: true
+          ## Comma delimited, example: DEVPILOT,DSO
+          project-keys: DEVPILOT
+          version-identifier: "CTLR_SANDBOX"
+      major-version:
+        enabled: true
+        rules:
+          branches:
+            target: release,develop,hotfix
+            enabled: true
+          message-tag:
+            target: MAJOR-VERSION
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: MAJOR-VERSION
+      minor-version:
+        enabled: true
+        rules:
+          branches:
+            target: release,develop,hotfix
+            enabled: true
+          message-tag:
+            target: MINOR-VERSION
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: MINOR-VERSION
+      patch-version:
+        enabled: true
+        rules:
+          branches:
+            target: main
+            enabled: true
+          message-tag:
+            target: PATCH-VERSION
+            enabled: false
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: PATCH-VERSION
+      release-candidate-version:
+        enabled: true
+        identifier: rc
+        rules:
+          branches:
+            target: release,hotfix,
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: RC-VERSION
+      development-version:
+        enabled: true
+        identifier: dev
+        rules:
+          branches:
+            target: develop,feature,bugfix
+            enabled: true
+          file:
+            enabled: false
+            target: ./app-version.cfg
+            key: DEV-VERSION
+      build-version:
+        enabled: true
+        identifier: bld
+        rules:
+          branches:
+            target: feature
+            enabled: true
+      replacement:
+        enabled: false
+        file-token:
+          enabled: false
+          target: pom.xml
+          token: "@@VERSION_BOT_TOKEN@@"
+        maven-pom:
+          enabled: false
+          target: pom.xml
+
+    branches:
+      default:
+        prepare-release:
+          enabled: false
+        tag-partior-stable:
+          enabled: false
+        gitleaks:
+          enabled: false
+          scan-depth: 2
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
+        artifact:
+          packager:
+            enabled: false
+            group: partior
+            artifactory-repo: scripts-generic-dev
+            artifactory-dev-repo: scripts-generic-dev-local
+            artifactory-release-repo: scripts-generic-release-local
+            folder-list: "./"
+            file-list: ""
