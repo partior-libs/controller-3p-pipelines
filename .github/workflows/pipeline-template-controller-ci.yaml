@@ -4,7 +4,7 @@ on:
       CONTROLLER-REPO: 
         required: false
         type: string
-        default: partior-libs/controller-generic-pipelines
+        default: partior-libs/controller-3p-pipelines
       CONTROLLER-REF:
         required: false
         type: string
