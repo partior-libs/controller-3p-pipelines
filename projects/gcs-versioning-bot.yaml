@@ -7,7 +7,7 @@ controller:
         artifactory:
           enabled: false
         jira:
-          enabled: false
+          enabled: true
           project-keys: DSO
           version-identifier: "LIB_GCS_VERSIONING_BOT"
     branches:
