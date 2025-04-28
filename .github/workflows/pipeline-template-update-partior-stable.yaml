@@ -10,26 +10,13 @@ on:
         required: false
         type: boolean
         default: false
-      RUNNER:
-        required: false
-        type: string
-        default: self-hosted-dev
 
 jobs:
-  select-runners:
-    runs-on: ubuntu-latest
-    outputs:
-      RUNNERS-POOL: ${{ steps.runners.outputs.runners-pool }}
-    steps:
-      - id: runners
-        uses: partior-libs/gcs-pipe-utils/actions/generic-runner-selection@partior-stable
-
   workflow-approval:
     if: inputs.SKIP-APPROVAL == false
     name: Workflow Approval - ${{ inputs.TARGET-REFERENCE }}
     environment: "PARTIOR-STABLE"
-    needs: [ select-runners ]
-    runs-on: ${{ fromJson(needs.select-runners.outputs.RUNNERS-POOL) }}
+    runs-on: ubuntu-latest
     steps:
       - name: Approving Workflow to move partior-stable tag
         run: |
@@ -53,8 +40,8 @@ jobs:
       always() &&
       !contains(needs.*.result, 'failure') &&
       !contains(needs.*.result, 'cancelled')
-    needs: [ workflow-approval, select-runners ]
-    runs-on: ${{ fromJson(needs.select-runners.outputs.RUNNERS-POOL) }}
+    needs: [ workflow-approval ]
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
