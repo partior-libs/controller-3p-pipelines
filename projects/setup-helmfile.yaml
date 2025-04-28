@@ -9,7 +9,7 @@ controller:
         jira:
           enabled: true
           project-keys: DSO
-          version-identifier: LIB_SETUP_HELMFILE
+          version-identifier: LIB_SETUP_HELMF
     branches:
       default:
         prepare-release:

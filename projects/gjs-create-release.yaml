@@ -9,7 +9,7 @@ controller:
         jira:
           enabled: true
           project-keys: DSO
-          version-identifier: LIB_GJS_CREATE_RELEASE
+          version-identifier: LIB_CREATE_REL
     branches:
       default:
         prepare-release:

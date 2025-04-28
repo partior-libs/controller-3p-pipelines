@@ -9,7 +9,7 @@ controller:
         jira:
           enabled: true
           project-keys: DSO
-          version-identifier: LIB_GCS_GITLEAKS_SCAN
+          version-identifier: LIB_GITLEAKS_SCAN
     branches:
       default:
         prepare-release:
