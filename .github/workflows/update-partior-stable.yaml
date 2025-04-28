@@ -10,7 +10,7 @@ on:
 
 jobs:
   update-partior-tag:
-    uses: partior-libs/controller-generic-pipelines/.github/workflows/pipeline-template-update-partior-stable.yaml@partior-stable
+    uses: partior-libs/controller-3p-pipelines/.github/workflows/pipeline-template-update-partior-stable.yaml@main
     with:
       TARGET-REFERENCE: ${{ github.event.inputs.target }}
     secrets: inherit
