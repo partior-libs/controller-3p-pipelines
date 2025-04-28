@@ -1,0 +1,49 @@
+---
+controller:
+  ci:
+    artifact-base-name: gcs-gitleaks-scan
+    artifact-auto-versioning:
+      version-sources:
+        artifactory:
+          enabled: false
+        jira:
+          enabled: true
+          project-keys: DSO
+          version-identifier: LIB_GCS_GITLEAKS_SCAN
+    branches:
+      default:
+        prepare-release:
+          enabled: false
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
+      develop:
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
+      release:
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
+      hotfix:
+        tag-version:
+          git:
+            enabled: false
+          jira-issue:
+            enabled: false
+      main:
+        prepare-release:
+          enabled: true
+        tag-version:
+          git:
+            enabled: true
+          jira-issue:
+            enabled: true
+        tag-partior-stable:
+          enabled: true
