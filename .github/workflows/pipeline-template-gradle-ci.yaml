@@ -16,7 +16,9 @@ env:
   YAML_CONFIG_IMPORTER: yaml_importer_${{ github.run_id }}_${{ github.run_number }}
   YAML_BRANCH_CONFIG_IMPORTER: yaml_branch_importer_${{ github.run_id }}_${{ github.run_number }}
   ARTIFACT_VERSION_FILE: version_file_${{ github.run_id }}_${{ github.run_number }}
-
+  GPG_SECRET_KEYS: ${{ secrets.GPG_SECRET_KEYS }}
+  GPG_OWNERTRUST: ${{ secrets.GPG_OWNERTRUST }}
+  
 jobs:
   read-repo:
     runs-on: ubuntu-latest
