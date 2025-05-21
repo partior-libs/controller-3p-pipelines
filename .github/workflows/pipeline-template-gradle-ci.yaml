@@ -268,9 +268,16 @@ jobs:
       - name: Publish to artifactory
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
+          ## Setting up GPG keys
+          echo "${GPG_SECRET_KEYS}" | base64 --decode | gpg --import --no-tty --batch --yes
+          echo ${GPG_OWNERTRUST} | base64 --decode | gpg --import-ownertrust
+          gpg -k
+          pubkey=`gpg --list-keys -a techservices-devsecops@partior.com|head -2|tail -1|xargs`
+          echo "[DEBUG] Pubkey: $pubkey"
+
           ## Upload to artifactory
           echo "[INFO] Upload to Artifactory"
-          jf gradle clean artifactoryPublish -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
+          jf gradle clean artifactoryPublish -Psigning.gnupg.keyName=$pubkey -Pversion=${{ steps.version-bot.outputs.artifact-version-name }}  --build-name "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" --build-number ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} 
           jf rt bp "Gradle CI - ${{ env.ARTIFACT_BASE_NAME }}" "${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
 
 
