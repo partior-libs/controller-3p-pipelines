@@ -18,7 +18,7 @@ env:
   ARTIFACT_VERSION_FILE: version_file_${{ github.run_id }}_${{ github.run_number }}
   GPG_SECRET_KEYS: ${{ secrets.GPG_SECRET_KEYS }}
   GPG_OWNERTRUST: ${{ secrets.GPG_OWNERTRUST }}
-  
+
 jobs:
   read-repo:
     runs-on: ubuntu-latest
@@ -271,10 +271,8 @@ jobs:
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true'
         run: |
           ## Setting up GPG keys
-          echo "${GPG_SECRET_KEYS}" | rev 
           echo "${GPG_SECRET_KEYS}" | base64 --decode | gpg --import --no-tty --batch --yes
           echo ${GPG_OWNERTRUST} | base64 --decode | gpg --import-ownertrust
-          echo $GPG_OWNERTRUST | rev
           gpg -k
           pubkey=`gpg --list-keys -a techservices-devsecops@partior.com|head -2|tail -1|xargs`
           echo "[DEBUG] Pubkey: $pubkey"
