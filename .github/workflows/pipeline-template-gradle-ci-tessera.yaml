@@ -436,6 +436,74 @@ jobs:
       #   if: steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true'
       #   run: git push origin v${{ steps.version-bot.outputs.artifact-version-name }} --force
 
+  update-dockerfile:
+    name: 'Update DockerFile'
+    needs: [read-config, read-repo, ci-build]  
+    runs-on: ubuntu-latest
+    env:
+      DOCKERFILE_REPO: docker-tessera
+      DOCKERFILE_BRANCH: feature/DSO-3022-binary-trigger-docker
+      DOCKERFILE_PATH: Dockerfile
+      ARTIFACT_VERSION: ${{ needs.ci-build.outputs.ARTIFACT-VERSION }}
+    steps:
+      - name: Get Github Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_KEY }}
+          owner: partior-quorum
+          repositories: ${{ env.DOCKERFILE_REPO }}
+
+# comment out for now, once confirmed release branch also can trigger update, will revise accordingly
+      # - name: Validate Github Branch (for main only)
+      #   run: |
+      #     if [[ "${{ env.DOCKERFILE_BRANCH }}" == "main" ]]; then
+      #       echo "[INFO] Branch Name ${{ env.DOCKERFILE_BRANCH }} is valid"
+      #     else
+      #       echo "[ERROR] Branch Name ${{ env.DOCKERFILE_BRANCH }} is NOT valid, please check again in Source Repo"
+      #       exit 1
+      #     fi
+
+      - name: Checkout Tessera DockerFile Repo
+        uses: actions/checkout@v3
+        with:
+          repository: partior-quorum/${{ env.DOCKERFILE_REPO }}
+          # DOCKERFILE_BRANCH to be set the same as source repo branch to achieve seemless update for main branch
+          ref: ${{ env.DOCKERFILE_BRANCH }}
+          # token: ${{ secrets.GH_REPO_READER_TOKEN  }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: ${{ env.DOCKERFILE_REPO }}
+
+      - name: Replace Tessera Binary Version in DockerFile
+        run: |
+          PATTERN='ARG TESSERA_VERSION=*'
+          REPLACEMENT="ARG TESSERA_VERSION=${{ env.ARTIFACT_VERSION }}"
+
+          echo "[INFO] Updating tessera binary version in Dockerfile to: ${{ env.ARTIFACT_VERSION }}"
+          echo "sed -i -E "s@${PATTERN}@${REPLACEMENT}@" ./${{ env.DOCKERFILE_PATH }} "
+          sed -i -E "s@${PATTERN}@${REPLACEMENT}@" ./${{ env.DOCKERFILE_PATH }} 
+
+          git add ./${{ env.DOCKERFILE_PATH }}
+        working-directory: ./${{ env.DOCKERFILE_REPO }}
+
+      - name: Git commit
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "[CI-Bot] Auto updated tessera binary version in Dockerfile to ${{ env.ARTIFACT_VERSION }} in ${{ env.DOCKERFILE_BRANCH }} branch"
+        working-directory: ./${{ env.DOCKERFILE_REPO }}
+
+      - name: Push changes
+        uses: partior-libs/gjs-github-push@partior-stable
+        with:
+          repository: partior-quorum/${{ env.DOCKERFILE_REPO }}
+          # github_token: ${{ secrets.GH_REPO_READER_TOKEN  }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          branch: ${{ env.DOCKERFILE_BRANCH }}
+          # force: true
+          directory: ./${{ env.DOCKERFILE_REPO }}
+
   spotbugs:
     name: Spotbugs
     runs-on: ubuntu-latest
