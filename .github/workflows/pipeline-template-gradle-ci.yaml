@@ -242,6 +242,7 @@ jobs:
         run: jf gradle check jacocoTestReport
 
       - name: Run Codacy Analysis CLI
+        id: codacy-analysis-cli
         if: steps.pipeline-branch-config.outputs.compile_gradle_enabled == 'true' && steps.pipeline-branch-config.outputs.codacy_spotbugs_enabled == 'true'
         uses: codacy/codacy-analysis-cli-action@master
         with:
@@ -253,6 +254,21 @@ jobs:
           skip-uncommitted-files-check: true
           upload: true
           skip-container-engine-check: true
+      
+      - name: "Retry processing the analysis results if failed"
+        if: ${{ steps.codacy-analysis-cli.outcome == 'failure' }}
+        shell: bash
+        run: |
+          CODACY_BASE_URL_OR_DEFAULT="https://api.codacy.com"
+          ORGANIZATION_PROVIDER=$(if [ "$GITHUB_SERVER_URL" == "https://github.com" ]; then echo "gh"; else echo "ghe"; fi)
+          OWNER_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d '/' -f 1)
+          REPOSITORY_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d '/' -f 2)
+          COMMIT_SHA=$(if [ "${{ github.event_name }}" == "pull_request" ]; then echo "${{ github.event.pull_request.head.sha }}"; else echo "${{ github.sha }}"; fi)
+          CURL_CODACY_AUTH_AUTHENTICATION="project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}"
+          echo "Uploading results for $ORGANIZATION_PROVIDER/$OWNER_NAME/$REPOSITORY_NAME commit $COMMIT_SHA"
+          curl -XPOST -L -H "$CURL_CODACY_AUTH_AUTHENTICATION" \
+            -H "Content-type: application/json" \
+            "${CODACY_BASE_URL_OR_DEFAULT}/2.0/$ORGANIZATION_PROVIDER/$OWNER_NAME/$REPOSITORY_NAME/commit/$COMMIT_SHA/resultsFinal"
 
       - name: Start versioning bot
         if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
