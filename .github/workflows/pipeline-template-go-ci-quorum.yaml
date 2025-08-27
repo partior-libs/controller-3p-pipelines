@@ -781,7 +781,7 @@ jobs:
           generate_release_notes: true
           tag_name: "v${{ env.ARTIFACT_VERSION }}"
           repository: "${{ github.repository }}"
-          token: ${{ secrets.GH_REPO_READER_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           append_body: true
 
   # publish-docker:
