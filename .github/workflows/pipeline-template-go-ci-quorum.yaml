@@ -86,11 +86,24 @@ jobs:
       ENABLE-ARTIFACT-PACKAGER: ${{ steps.pipeline-branch-config.outputs.artifact_packager_enabled }}
       PREPARE-RELEASE: ${{ steps.pipeline-branch-config.outputs.prepare-release_enabled }}
     steps:
+      - name: Get owner name
+        id: repo-owner
+        run: |
+          repoOwner=$(echo ${{ inputs.CONTROLLER-REPO }} | cut -d"/" -f1)
+          echo "name=$repoOwner" | tee -a $GITHUB_OUTPUT
+
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_KEY }}
+          owner: ${{ steps.repo-owner.outputs.name }}
+
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.CONTROLLER-REPO }}
           ref: ${{ inputs.CONTROLLER-REF }}
-          token: ${{ secrets.GH_REPO_READER_TOKEN  }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Get repo details
         id: get-repo
@@ -745,13 +758,19 @@ jobs:
         REPO_NAME: ${{ needs.read-repo.outputs.REPO-NAME }}
         
       steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_KEY }}
+
       - name: Tag release version on code baseline
         uses: partior-libs/gcs-pipe-utils/actions/generic-git-tag@partior-stable
         with: 
           target-repo: "${{ github.repository }}"
           artifact-version: "${{ env.ARTIFACT_VERSION }}"
           target-repo-ref: "${{ env.COMMIT_HASH }}"
-          pat-token: ${{ secrets.GH_REPO_READER_TOKEN }}
+          pat-token: ${{ steps.app-token.outputs.token }}
 
       - name: Create release
         uses: partior-libs/gjs-create-release@partior-stable
@@ -762,7 +781,7 @@ jobs:
           generate_release_notes: true
           tag_name: "v${{ env.ARTIFACT_VERSION }}"
           repository: "${{ github.repository }}"
-          token: ${{ secrets.GH_REPO_READER_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           append_body: true
 
   # publish-docker:
