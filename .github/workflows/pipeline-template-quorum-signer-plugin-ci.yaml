@@ -272,7 +272,7 @@ jobs:
           fi
 
           echo "[INFO] Last tag found: $lastTag"
-          echo "PLUGIN-BASE-VERSION=$lastTag" > ./app-version.cfg
+          echo "PLUGIN-BASE-VERSION=$lastTag" >> ./app-version.cfg
           echo "last-tag=$lastTag" >> $GITHUB_OUTPUT
 
       - name: Start versioning bot
