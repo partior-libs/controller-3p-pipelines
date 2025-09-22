@@ -209,11 +209,17 @@ jobs:
           echo Importing ...${{ env.YAML_CONFIG_IMPORTER }}
           source ./${{ env.YAML_CONFIG_IMPORTER }}
 
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_KEY }}
+
       - name: Get last tag from original source
         id: get-tag
         #if: steps.pipeline-branch-config.outputs.artifact_packager_enabled == 'true' || steps.pipeline-branch-config.outputs.tag-version_git_enabled == 'true' || steps.pipeline-branch-config.outputs.prepare-release_enabled == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GH_REPO_READER_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           #!/bin/bash
           set +e
@@ -453,6 +459,9 @@ jobs:
       #     export PATH=$PATH:$(go env GOPATH)/bin
       #     make VERSION=${{ steps.meta.outputs.version_short }} extraldflags='-linkmode external -extldflags "-static"'
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.20'
 
       - name: Run Codacy Analysis CLI
         uses: codacy/codacy-analysis-cli-action@master
