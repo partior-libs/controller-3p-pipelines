@@ -334,6 +334,9 @@ jobs:
           echo "version=v${{env.ARTIFACT_VERSION}}" >> $GITHUB_OUTPUT
           echo "version_short=${{env.ARTIFACT_VERSION}}" >> $GITHUB_OUTPUT
 
+      - name: Enable Go modules
+        run: echo "GO111MODULE=on" >> $GITHUB_ENV
+        
       - name: Create macos dist
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
