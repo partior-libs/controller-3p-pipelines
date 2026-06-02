@@ -19,5 +19,7 @@ on:
 
 jobs:
   update-partior-tag:
-    uses: partior-libs/controller-3p-pipelines/.github/workflows/pipeline-template-controller-ci.yaml@main
+    uses: partior-libs/controller-3p-pipelines/.github/workflows/pipeline-template-controller-ci.yaml@feature/DSO-4174_support_jira_oath
+    with:
+      CONTROLLER-REF: feature/DSO-4174_support_jira_oath
     secrets: inherit

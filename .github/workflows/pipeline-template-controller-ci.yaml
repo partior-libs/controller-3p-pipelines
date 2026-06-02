@@ -185,7 +185,7 @@ jobs:
 
       - name: Start versioning bot
         id: version-bot
-        uses: partior-libs/gcs-versioning-bot@main
+        uses: partior-libs/gcs-versioning-bot@feature/DSO-4174_support_jira_oath
         with:
           jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
@@ -193,6 +193,9 @@ jobs:
           consolidated-commit-msg: ${{ env.ALL_DELTA_COMMIT_MSG }}
           jira-username: ${{ secrets.JIRA_USERNAME }}
           jira-password: ${{ secrets.JIRA_PASSWORD }}
+          jira-oauth-token: ${{ secrets.JIRA_OAUTH_TOKEN }}
+          jira-client-id: ${{ secrets.JIRA_CLIENT_ID }}
+          jira-client-secret: ${{ secrets.JIRA_CLIENT_SECRET }}
           debug: true
 
 
