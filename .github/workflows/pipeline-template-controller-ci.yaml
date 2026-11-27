@@ -186,6 +186,9 @@ jobs:
       - name: Start versioning bot
         id: version-bot
         uses: partior-libs/gcs-versioning-bot@main
+        env:
+          JIRA_CLIENT_ID: ${{ secrets.JIRA_CLIENT_ID }}
+          JIRA_CLIENT_SECRET: ${{ secrets.JIRA_CLIENT_SECRET }}
         with:
           jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
