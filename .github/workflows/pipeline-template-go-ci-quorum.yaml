@@ -341,8 +341,8 @@ jobs:
         id: version-bot
         uses: partior-libs/gcs-versioning-bot@partior-stable
         env:
-          JIRA_CLIENT_ID: ${{ secrets.JIRA_SE_CLIENT_ID }}
-          JIRA_CLIENT_SECRET: ${{ secrets.JIRA_SE_CLIENT_SECRET }}
+          JIRA_CLIENT_ID: ${{ secrets.JIRA_CLIENT_ID }}
+          JIRA_CLIENT_SECRET: ${{ secrets.JIRA_CLIENT_SECRET }}
         with:
           jfrog-token: ${{ secrets.JFROG_ARTIFACTORY_CONFIG }}
           versioning-rules-importer-file: ${{ env.YAML_CONFIG_IMPORTER }}
